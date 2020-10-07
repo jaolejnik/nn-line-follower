@@ -1,6 +1,5 @@
-from time import sleep 
-import RPi.GPIO as GPIO 
-
+from time import sleep
+import RPi.GPIO as GPIO
 
 # ----- CONSTANTS -----
 PWM_FREQ = 100
@@ -8,20 +7,20 @@ MOTORS_IDS = ("RIGHT", "LEFT")
 
 
 # ----- SETUP BOARD -----
-GPIO.setmode(GPIO.BOARD)      
-GPIO.setwarnings(False);
+GPIO.setmode(GPIO.BOARD)
+GPIO.setwarnings(False)
 
 # Setup Pins for the motor controller (I'm using TB6612FNG H-Bridge)
-GPIO.setup(12, GPIO.OUT)    # PWMA
-GPIO.setup(16, GPIO.OUT)    # AIN1
-GPIO.setup(18, GPIO.OUT)    # AIN2
-GPIO.setup(22, GPIO.OUT)    # STBY
-GPIO.setup(13, GPIO.OUT)    # BIN2
-GPIO.setup(15, GPIO.OUT)    # BIN1
-GPIO.setup(11, GPIO.OUT)    # PWMB
+GPIO.setup(12, GPIO.OUT)  # PWMA
+GPIO.setup(16, GPIO.OUT)  # AIN1
+GPIO.setup(18, GPIO.OUT)  # AIN2
+GPIO.setup(22, GPIO.OUT)  # STBY
+GPIO.setup(13, GPIO.OUT)  # BIN2
+GPIO.setup(15, GPIO.OUT)  # BIN1
+GPIO.setup(11, GPIO.OUT)  # PWMB
 
-pwm_a = GPIO.PWM(12, PWM_FREQ)    # pin 18 to PWM
-pwm_b = GPIO.PWM(11, PWM_FREQ)    # pin 13 to PWM
+pwm_a = GPIO.PWM(12, PWM_FREQ)  # pin 18 to PWM
+pwm_b = GPIO.PWM(11, PWM_FREQ)  # pin 13 to PWM
 pwm_a.start(100)
 pwm_b.start(100)
 
@@ -48,22 +47,13 @@ def stop_motors():
 
 
 MOTORS = {
-    "RIGHT": {
-        "+": motor_a_positive, 
-        "-": motor_a_negative,
-        "PWM": pwm_a
-    },
-
-    "LEFT": {
-        "+": motor_b_positive, 
-        "-": motor_b_negative,
-        "PWM": pwm_b
-    }
+    "RIGHT": {"+": motor_a_positive, "-": motor_a_negative, "PWM": pwm_a},
+    "LEFT": {"+": motor_b_positive, "-": motor_b_negative, "PWM": pwm_b},
 }
 
 
 def run_motor(motor_id, direction, speed):
-    GPIO.output(22, GPIO.HIGH);
+    GPIO.output(22, GPIO.HIGH)
     if direction == "FORWARD":
         MOTORS[motor_id]["+"](GPIO.HIGH)
         MOTORS[motor_id]["-"](GPIO.LOW)
@@ -73,35 +63,39 @@ def run_motor(motor_id, direction, speed):
     MOTORS[motor_id]["PWM"].ChangeDutyCycle(speed)
 
 
-# ----- MOVEMENT FUNCTIONS -----
-def move(direction, speed, time):
-    for motor_id in MOTORS_IDS:
-        run_motor(motor_id, direction, speed)
-    sleep(time)
-    stop_motors()
+# ----- MOVEMENT METHODS -----
+class Movement:
+    '''
+    Basic movement methods.
+    '''
+    @staticmethod
+    def move(direction, speed, time):
+        for motor_id in MOTORS_IDS:
+            run_motor(motor_id, direction, speed)
+        sleep(time)
+        stop_motors()
 
+    @staticmethod
+    def turn(direction_x, direction_y, speed, sharpness, time):
+        if direction_x == "RIGHT":
+            run_motor("LEFT", direction_y, speed * sharpness)
+            run_motor("RIGHT", direction_y, speed)
+        elif direction_x == "LEFT":
+            run_motor("LEFT", direction_y, speed)
+            run_motor("RIGHT", direction_y, speed * sharpness)
+        sleep(time)
+        stop_motors()
 
-def turn(direction_x, direction_y, speed, sharpness, time):
-    if direction_x == "RIGHT":
-        run_motor("LEFT", direction_y, speed*sharpness)
-        run_motor("RIGHT", direction_y, speed)
-    elif direction_x == "LEFT":
-        run_motor("LEFT", direction_y, speed)
-        run_motor("RIGHT", direction_y, speed*sharpness)
-    sleep(time)
-    stop_motors()
-
-
-def rotate(direction, speed, time):
-    if direction == "RIGHT":
-        run_motor("LEFT", "REVERSE", speed)
-        run_motor("RIGHT", "FORWARD", speed)
-    elif direction == "LEFT":
-        run_motor("LEFT", "FORWARD", speed)
-        run_motor("RIGHT", "REVERSE", speed)
-    sleep(time)
-    stop_motors()
-
+    @staticmethod
+    def rotate(direction, speed, time):
+        if direction == "RIGHT":
+            run_motor("LEFT", "REVERSE", speed)
+            run_motor("RIGHT", "FORWARD", speed)
+        elif direction == "LEFT":
+            run_motor("LEFT", "FORWARD", speed)
+            run_motor("RIGHT", "REVERSE", speed)
+        sleep(time)
+        stop_motors()
 
 
 if __name__ == "__main__":
