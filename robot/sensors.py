@@ -1,5 +1,6 @@
-import RPi.GPIO as GPIO
 from time import sleep
+
+import RPi.GPIO as GPIO
 
 GPIO.setmode(GPIO.BOARD)
 GPIO.setwarnings(False)
@@ -9,9 +10,10 @@ GPIO.setup(38, GPIO.IN)
 
 
 class LineSensors:
-    '''
-    Infrared sensors for line detection. 
-    '''
+    """
+    Infrared sensors for line detection.
+    """
+
     @staticmethod
     def left_sensor():
         return GPIO.input(37)

@@ -1,4 +1,5 @@
 from time import sleep
+
 import RPi.GPIO as GPIO
 
 # ----- CONSTANTS -----
@@ -65,9 +66,10 @@ def run_motor(motor_id, direction, speed):
 
 # ----- MOVEMENT METHODS -----
 class Movement:
-    '''
+    """
     Basic movement methods.
-    '''
+    """
+
     @staticmethod
     def move(direction, speed, time):
         for motor_id in MOTORS_IDS:
