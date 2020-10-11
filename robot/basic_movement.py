@@ -1,3 +1,5 @@
+import json
+from enum import Enum
 from time import sleep
 
 import RPi.GPIO as GPIO
@@ -47,21 +49,40 @@ def stop_motors():
     GPIO.output(22, GPIO.LOW)
 
 
-MOTORS = {
-    "RIGHT": {"+": motor_a_positive, "-": motor_a_negative, "PWM": pwm_a},
-    "LEFT": {"+": motor_b_positive, "-": motor_b_negative, "PWM": pwm_b},
-}
+# ----- ENUMS -----
+class DirectionX(Enum):
+    LEFT = 0
+    RIGHT = 1
 
 
-def run_motor(motor_id, direction, speed):
-    GPIO.output(22, GPIO.HIGH)
-    if direction == "FORWARD":
-        MOTORS[motor_id]["+"](GPIO.HIGH)
-        MOTORS[motor_id]["-"](GPIO.LOW)
-    elif direction == "REVERSE":
-        MOTORS[motor_id]["+"](GPIO.LOW)
-        MOTORS[motor_id]["-"](GPIO.HIGH)
-    MOTORS[motor_id]["PWM"].ChangeDutyCycle(speed)
+class DirectionY(Enum):
+    REVERSE = 0
+    FORWARD = 1
+
+
+# ----- MOTORS METHODS -----
+class Motors:
+    right = {"+": motor_a_positive, "-": motor_a_negative, "PWM": pwm_a}
+    left = {"+": motor_b_positive, "-": motor_b_negative, "PWM": pwm_b}
+    
+    @staticmethod
+    def motor_switch(motor_id):
+        motor_dict = {
+            "RIGHT": right,
+            "LEFT": left
+        }
+        return motor_dict.get(motor_id)
+
+    @staticmethod
+    def run(motor_id, direction_y, speed):
+        GPIO.output(22, GPIO.HIGH)
+        if direction_y == DirectionY.FORWARD:
+            motor_switch(motor_id)["+"](GPIO.HIGH)
+            motor_switch(motor_id)["-"](GPIO.LOW)
+        elif direction == DirectionY.REVERSE:
+            motor_switch(motor_id)["+"](GPIO.LOW)
+            motor_switch(motor_id)["-"](GPIO.HIGH)
+        motor_switch(motor_id)["PWM"].ChangeDutyCycle(speed)    
 
 
 # ----- MOVEMENT METHODS -----
@@ -71,33 +92,76 @@ class Movement:
     """
 
     @staticmethod
-    def move(direction, speed, time):
+    def move(direction_y, speed, time):
         for motor_id in MOTORS_IDS:
-            run_motor(motor_id, direction, speed)
+            Motors.run,(motor_id, direction_y, speed)
         sleep(time)
         stop_motors()
 
     @staticmethod
     def turn(direction_x, direction_y, speed, sharpness, time):
-        if direction_x == "RIGHT":
-            run_motor("LEFT", direction_y, speed * sharpness)
-            run_motor("RIGHT", direction_y, speed)
-        elif direction_x == "LEFT":
-            run_motor("LEFT", direction_y, speed)
-            run_motor("RIGHT", direction_y, speed * sharpness)
+        if direction_x == DirectionX.RIGHT:
+            Motors.run("LEFT", direction_y, speed * sharpness)
+            Motors.run("RIGHT", direction_y, speed)
+        elif direction_x == DirectionX.LEFT:
+            Motors.run("LEFT", direction_y, speed)
+            Motors.run("RIGHT", direction_y, speed * sharpness)
         sleep(time)
         stop_motors()
 
     @staticmethod
-    def rotate(direction, speed, time):
-        if direction == "RIGHT":
-            run_motor("LEFT", "REVERSE", speed)
-            run_motor("RIGHT", "FORWARD", speed)
-        elif direction == "LEFT":
-            run_motor("LEFT", "FORWARD", speed)
-            run_motor("RIGHT", "REVERSE", speed)
+    def rotate(direction_x, speed, time):
+        if direction == DirectionX.RIGHT:
+            Motors.run("LEFT", DirectionY.REVERSE, speed)
+            Motors.run("RIGHT", DirectionY.FORWARD, speed)
+        elif direction == DirectionX.LEFT:
+            Motors.run("LEFT", DirectionY.FORWARD, speed)
+            Motors.run("RIGHT", DirectionY.REVERSE, speed)
         sleep(time)
         stop_motors()
+
+
+class MovementManager:
+    def __init__(self):
+        self.data = {"actions": []}
+        self.robot_is_running = True
+
+    def save_action(self, action, **kwargs):
+        if action == Movement.move:
+            action_string = "move"
+        elif action == Movement.turn:
+            action_string = "turn"
+        elif action_string == Movement.rotate:
+            action_string = "rotate"
+        action_args = kwargs
+        action_dict = {"type": action_string, "args": action_args}
+
+        self.data["actions"].append(action_dict)
+
+        if not self.robot_is_running:
+            with open("movement_actions.json", "w") as action_file:
+                json.dump(self.data)
+
+    def load_actions(self, filename):
+        with open("movement_actions.json") as action_file:
+            self.data = json.load(action_file)
+
+    def reverse_actions(self, action):
+        for action in self.data["actions"]:
+            if action["type"] == "move":
+                action["args"]["direction_y"] = not action["args"]["direction_y"]
+            if action["type"] == "turn":
+                action["args"]["direction_y"] = not action["args"]["direction_y"]
+                action["args"]["direction_x"] = not action["args"]["direction_x"]
+            if action["type"] == "rotate":
+                action["args"]["direction_x"] = not action["args"]["direction_x"]
+
+    def perform_actions(self):
+        for action in self.data["actions"]:
+            arg_string = [arg for arg in action["args"].values()].join(", ")
+            command = f"{action["type"]}({arg_string})"
+            eval(command)
+                
 
 
 if __name__ == "__main__":
