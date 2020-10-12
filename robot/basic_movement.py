@@ -1,5 +1,5 @@
 import json
-from enum import Enum
+from enum import IntEnum
 from time import sleep
 
 import RPi.GPIO as GPIO
@@ -50,12 +50,12 @@ def stop_motors():
 
 
 # ----- ENUMS -----
-class DirectionX(Enum):
+class DirectionX(IntEnum):
     LEFT = 0
     RIGHT = 1
 
 
-class DirectionY(Enum):
+class DirectionY(IntEnum):
     REVERSE = 0
     FORWARD = 1
 
@@ -67,19 +67,19 @@ class Motors:
 
     @staticmethod
     def motor_switch(motor_id):
-        motor_dict = {"RIGHT": right, "LEFT": left}
+        motor_dict = {"RIGHT": Motors.right, "LEFT": Motors.left}
         return motor_dict.get(motor_id)
 
     @staticmethod
     def run(motor_id, direction_y, speed):
         GPIO.output(22, GPIO.HIGH)
         if direction_y == DirectionY.FORWARD:
-            motor_switch(motor_id)["+"](GPIO.HIGH)
-            motor_switch(motor_id)["-"](GPIO.LOW)
-        elif direction == DirectionY.REVERSE:
-            motor_switch(motor_id)["+"](GPIO.LOW)
-            motor_switch(motor_id)["-"](GPIO.HIGH)
-        motor_switch(motor_id)["PWM"].ChangeDutyCycle(speed)
+            Motors.motor_switch(motor_id)["+"](GPIO.HIGH)
+            Motors.motor_switch(motor_id)["-"](GPIO.LOW)
+        elif direction_y == DirectionY.REVERSE:
+            Motors.motor_switch(motor_id)["+"](GPIO.LOW)
+            Motors.motor_switch(motor_id)["-"](GPIO.HIGH)
+        Motors.motor_switch(motor_id)["PWM"].ChangeDutyCycle(speed)
 
 
 # ----- MOVEMENT METHODS -----
@@ -94,7 +94,7 @@ class Movement:
             return "move"
 
         for motor_id in MOTORS_IDS:
-            Motors.run, (motor_id, direction_y, speed)
+            Motors.run(motor_id, direction_y, speed)
         sleep(time)
         stop_motors()
 
@@ -111,10 +111,10 @@ class Movement:
 
     @staticmethod
     def rotate(direction_x, speed, time):
-        if direction == DirectionX.RIGHT:
+        if direction_x == DirectionX.RIGHT:
             Motors.run("LEFT", DirectionY.REVERSE, speed)
             Motors.run("RIGHT", DirectionY.FORWARD, speed)
-        elif direction == DirectionX.LEFT:
+        elif direction_x == DirectionX.LEFT:
             Motors.run("LEFT", DirectionY.FORWARD, speed)
             Motors.run("RIGHT", DirectionY.REVERSE, speed)
         sleep(time)
@@ -124,45 +124,37 @@ class Movement:
 class MovementManager:
     def __init__(self):
         self.data = {"actions": []}
-        self.robot_is_running = True
 
-    def end_work():
-        self.robot_is_running = False
+    def save_actions(self):
+        with open("movement_actions.json", "w") as action_file:
+            action_file.write(json.dumps(self.data))
 
-    def save_action(self, action, **kwargs):
+    def add_action(self, action, **kwargs):
         action_type = action.__name__
         action_args = kwargs
         action_dict = {"type": action_type, "args": action_args}
 
         self.data["actions"].append(action_dict)
 
-        if not self.robot_is_running:
-            with open("movement_actions.json", "w") as action_file:
-                json.dump(self.data)
-
     def load_actions(self, filename):
         with open("movement_actions.json") as action_file:
             self.data = json.load(action_file)
 
-    def reverse_actions(self, action):
+    def reverse_actions(self):
         for action in self.data["actions"]:
-            if action["type"] == "move":
-                action["args"]["direction_y"] = not action["args"]["direction_y"]
-            if action["type"] == "turn":
-                action["args"]["direction_y"] = not action["args"]["direction_y"]
-                action["args"]["direction_x"] = not action["args"]["direction_x"]
-            if action["type"] == "rotate":
-                action["args"]["direction_x"] = not action["args"]["direction_x"]
+            action["args"]["direction_y"] = not action["args"]["direction_y"]
+        self.data["actions"].reverse()
 
     def perform_action(self, action, **kwargs):
         action_type = action if type(action) == str else action.__name__
-        arg_string = [f"{key}={value}" for key, value in kwargs.items()].join(", ")
-        command = f"{action_type}({arg_string})"
-        eval(comand)
+        arg_string = ", ".join([f"{key}={value}" for key, value in kwargs.items()])
+        command = f"Movement.{action_type}({arg_string})"
+        print(command)
+        eval(command)
 
     def perform_saved_actions(self):
         for action in self.data["actions"]:
-            self.perform_action(action["type"], action["args"])
+            self.perform_action(action["type"], **action["args"])
 
 
 if __name__ == "__main__":
