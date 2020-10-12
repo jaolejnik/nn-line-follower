@@ -126,6 +126,9 @@ class MovementManager:
         self.data = {"actions": []}
         self.robot_is_running = True
 
+    def end_work():
+        self.robot_is_running = False
+
     def save_action(self, action, **kwargs):
         action_type = action.__name__
         action_args = kwargs
