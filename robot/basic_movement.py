@@ -64,13 +64,10 @@ class DirectionY(Enum):
 class Motors:
     right = {"+": motor_a_positive, "-": motor_a_negative, "PWM": pwm_a}
     left = {"+": motor_b_positive, "-": motor_b_negative, "PWM": pwm_b}
-    
+
     @staticmethod
     def motor_switch(motor_id):
-        motor_dict = {
-            "RIGHT": right,
-            "LEFT": left
-        }
+        motor_dict = {"RIGHT": right, "LEFT": left}
         return motor_dict.get(motor_id)
 
     @staticmethod
@@ -82,7 +79,7 @@ class Motors:
         elif direction == DirectionY.REVERSE:
             motor_switch(motor_id)["+"](GPIO.LOW)
             motor_switch(motor_id)["-"](GPIO.HIGH)
-        motor_switch(motor_id)["PWM"].ChangeDutyCycle(speed)    
+        motor_switch(motor_id)["PWM"].ChangeDutyCycle(speed)
 
 
 # ----- MOVEMENT METHODS -----
@@ -93,8 +90,11 @@ class Movement:
 
     @staticmethod
     def move(direction_y, speed, time):
+        def __str__():
+            return "move"
+
         for motor_id in MOTORS_IDS:
-            Motors.run,(motor_id, direction_y, speed)
+            Motors.run, (motor_id, direction_y, speed)
         sleep(time)
         stop_motors()
 
@@ -127,14 +127,9 @@ class MovementManager:
         self.robot_is_running = True
 
     def save_action(self, action, **kwargs):
-        if action == Movement.move:
-            action_string = "move"
-        elif action == Movement.turn:
-            action_string = "turn"
-        elif action_string == Movement.rotate:
-            action_string = "rotate"
+        action_type = action.__name__
         action_args = kwargs
-        action_dict = {"type": action_string, "args": action_args}
+        action_dict = {"type": action_type, "args": action_args}
 
         self.data["actions"].append(action_dict)
 
@@ -156,12 +151,15 @@ class MovementManager:
             if action["type"] == "rotate":
                 action["args"]["direction_x"] = not action["args"]["direction_x"]
 
-    def perform_actions(self):
+    def perform_action(self, action, **kwargs):
+        action_type = action if type(action) == str else action.__name__
+        arg_string = [f"{key}={value}" for key, value in kwargs.items()].join(", ")
+        command = f"{action_type}({arg_string})"
+        eval(comand)
+
+    def perform_saved_actions(self):
         for action in self.data["actions"]:
-            arg_string = [arg for arg in action["args"].values()].join(", ")
-            command = f"{action["type"]}({arg_string})"
-            eval(command)
-                
+            self.perform_action(action["type"], action["args"])
 
 
 if __name__ == "__main__":
