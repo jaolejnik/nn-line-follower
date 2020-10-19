@@ -1,12 +1,23 @@
-from time import sleep
+from time import sleep, time
 
 import RPi.GPIO as GPIO
 
 GPIO.setmode(GPIO.BOARD)
 GPIO.setwarnings(False)
 
-GPIO.setup(37, GPIO.IN)
-GPIO.setup(38, GPIO.IN)
+# ----- CONSTANTS -----
+FRONT_TRIGGER = 35
+FRONT_ECHO = 36
+LEFT_LINE = 37
+RIGHT_LINE = 38
+
+# ----- DISTANCE SENSORS PINS -----
+GPIO.setup(35, GPIO.OUT)
+GPIO.setup(36, GPIO.IN)
+
+# ----- LINE SENSORS PINS -----
+GPIO.setup(LEFT_LINE, GPIO.IN)
+GPIO.setup(RIGHT_LINE, GPIO.IN)
 
 
 class LineSensors:
@@ -16,14 +27,43 @@ class LineSensors:
 
     @staticmethod
     def left_sensor():
-        return GPIO.input(37)
+        return GPIO.input(LEFT_LINE)
 
     @staticmethod
     def right_sensor():
-        return GPIO.input(38)
+        return GPIO.input(RIGHT_LINE)
+
+
+class CollisionSensors:
+    """
+    Ultrasound sensors for detection of incoming objects.
+    """
+
+    @staticmethod
+    def front_distance():
+        GPIO.output(FRONT_TRIGGER, GPIO.HIGH)
+        sleep(0.00001)
+        GPIO.output(FRONT_TRIGGER, False)
+        start = time()
+        stop = time()
+        while GPIO.input(FRONT_ECHO) == 0:
+            start = time()
+        while GPIO.input(FRONT_ECHO) == 1:
+            stop = time()
+        TimeElapsed = stop - start
+        distance = (TimeElapsed * 34300) / 2
+        return distance
 
 
 if __name__ == "__main__":
     while True:
-        print("LEFT: ", GPIO.input(37), "| RIGHT: ", GPIO.input(38))
+        print(
+            "LEFT: ",
+            LineSensors.left_sensor(),
+            "| RIGHT: ",
+            LineSensors.right_sensor(),
+            "| FRONT DISTANCE:",
+            CollisionSensors.front_distance(),
+            end="\r",
+        )
         sleep(0.1)

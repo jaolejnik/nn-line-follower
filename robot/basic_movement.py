@@ -155,13 +155,3 @@ class MovementManager:
     def perform_saved_actions(self):
         for action in self.data["actions"]:
             self.perform_action(action["type"], **action["args"])
-
-
-if __name__ == "__main__":
-    turn("RIGHT", "FORWARD", 50, 0.5, 2)
-    sleep(0.3)
-    move("FORWARD", 50, 2)
-    sleep(0.3)
-    rotate("RIGHT", 50, 5)
-
-    GPIO.cleanup()
