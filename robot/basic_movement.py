@@ -1,4 +1,3 @@
-import json
 from enum import IntEnum
 from time import sleep
 
@@ -90,9 +89,6 @@ class Movement:
 
     @staticmethod
     def move(direction_y, speed, time):
-        def __str__():
-            return "move"
-
         for motor_id in MOTORS_IDS:
             Motors.run(motor_id, direction_y, speed)
         sleep(time)
@@ -101,11 +97,11 @@ class Movement:
     @staticmethod
     def turn(direction_x, direction_y, speed, sharpness, time):
         if direction_x == DirectionX.RIGHT:
-            Motors.run("LEFT", direction_y, speed * sharpness)
+            Motors.run("LEFT", direction_y, speed * (1 - sharpness))
             Motors.run("RIGHT", direction_y, speed)
         elif direction_x == DirectionX.LEFT:
             Motors.run("LEFT", direction_y, speed)
-            Motors.run("RIGHT", direction_y, speed * sharpness)
+            Motors.run("RIGHT", direction_y, speed * (1 - sharpness))
         sleep(time)
         stop_motors()
 
@@ -119,39 +115,3 @@ class Movement:
             Motors.run("RIGHT", DirectionY.REVERSE, speed)
         sleep(time)
         stop_motors()
-
-
-class MovementManager:
-    def __init__(self):
-        self.data = {"actions": []}
-
-    def save_actions(self):
-        with open("movement_actions.json", "w") as action_file:
-            action_file.write(json.dumps(self.data))
-
-    def add_action(self, action, **kwargs):
-        action_type = action.__name__
-        action_args = kwargs
-        action_dict = {"type": action_type, "args": action_args}
-
-        self.data["actions"].append(action_dict)
-
-    def load_actions(self, filename):
-        with open("movement_actions.json") as action_file:
-            self.data = json.load(action_file)
-
-    def reverse_actions(self):
-        for action in self.data["actions"]:
-            action["args"]["direction_y"] = not action["args"]["direction_y"]
-        self.data["actions"].reverse()
-
-    def perform_action(self, action, **kwargs):
-        action_type = action if type(action) == str else action.__name__
-        arg_string = ", ".join([f"{key}={value}" for key, value in kwargs.items()])
-        command = f"Movement.{action_type}({arg_string})"
-        print(command)
-        eval(command)
-
-    def perform_saved_actions(self):
-        for action in self.data["actions"]:
-            self.perform_action(action["type"], **action["args"])

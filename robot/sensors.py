@@ -26,12 +26,20 @@ class LineSensors:
     """
 
     @staticmethod
-    def left_sensor():
+    def left():
         return GPIO.input(LEFT_LINE)
 
     @staticmethod
-    def right_sensor():
+    def right():
         return GPIO.input(RIGHT_LINE)
+
+    @staticmethod
+    def one_or_more_active():
+        return GPIO.input(LEFT_LINE) or GPIO.input(RIGHT_LINE)
+
+    @staticmethod
+    def both_active():
+        return GPIO.input(LEFT_LINE) and GPIO.input(RIGHT_LINE)
 
 
 class CollisionSensors:
