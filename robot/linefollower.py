@@ -1,14 +1,17 @@
 from enum import Enum
+from time import sleep
+
+from utils.timer import Timer
 
 from .basic_movement import DirectionX, DirectionY, Movement
 from .manager import MovementManager
 from .sensors import CollisionSensors, LineSensors
 
 FIND_TRACK_ACTIONS = [
-    "Movement.move(DirectionY.FORWARD, self.base_speed, self.action_time)",
-    "Movement.move(DirectionY.REVERSE, self.base_speed, self.action_time)",
+    "Movement.move(DirectionY.FORWARD, self.base_speed, self.action_time*5)",
+    "Movement.move(DirectionY.REVERSE, self.base_speed, self.action_time*5)",
     "Movement.rotate(DirectionX.RIGHT, self.base_speed, self.action_time*5)",
-    "sleep(self.action_time*5)",
+    # "sleep(self.action_time*5)",
 ]
 
 
@@ -25,9 +28,11 @@ class LineFollower:
 
         self.line_sensors = LineSensors
         self.collision_sensors = CollisionSensors
-        self.action_manager = MovementManager()
         self.last_active_line_sensor = ActiveSensor.BOTH
         self.lost = False
+        self.action_manager = MovementManager()
+        self.timer = Timer()
+        self.time_since_lost_line = 0
 
     def move(self, direction_y):
         self.action_manager.add_and_save_action(
@@ -74,3 +79,26 @@ class LineFollower:
                 break
             eval(action)
             self.lost = not self.line_sensors.one_or_more_active()
+
+    def follow_line(self):
+        if self.line_sensors.both_active():
+            self.move(DirectionY.FORWARD)
+            self.last_active_line_sensor = ActiveSensor.BOTH
+
+        if self.line_sensors.only_right_active():
+            self.turn(DirectionX.RIGHT)
+            self.last_active_line_sensor = ActiveSensor.RIGHT
+
+        if self.line_sensors.only_left_active():
+            self.turn(DirectionX.LEFT)
+            self.last_active_line_sensor = ActiveSensor.LEFT
+
+    def run(self):
+        while True:
+            if not self.lost:
+                self.follow_line()
+                if not self.line_sensors.one_or_more_active():
+                    self.get_back_on_track()
+                    self.lost = self.timer.countdown_to(3)
+            else:
+                self.find_track()

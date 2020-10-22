@@ -34,12 +34,20 @@ class LineSensors:
         return GPIO.input(RIGHT_LINE)
 
     @staticmethod
+    def only_left_active():
+        return LineSensors.left() and not LineSensors.right()
+
+    @staticmethod
+    def only_right_active():
+        return not LineSensors.left() and LineSensors.right()
+
+    @staticmethod
     def one_or_more_active():
-        return GPIO.input(LEFT_LINE) or GPIO.input(RIGHT_LINE)
+        return LineSensors.left() or LineSensors.right()
 
     @staticmethod
     def both_active():
-        return GPIO.input(LEFT_LINE) and GPIO.input(RIGHT_LINE)
+        return LineSensors.left() and LineSensors.right()
 
 
 class CollisionSensors:
@@ -67,9 +75,9 @@ if __name__ == "__main__":
     while True:
         print(
             "LEFT: ",
-            LineSensors.left_sensor(),
+            LineSensors.left(),
             "| RIGHT: ",
-            LineSensors.right_sensor(),
+            LineSensors.right(),
             "| FRONT DISTANCE:",
             CollisionSensors.front_distance(),
             end="\r",

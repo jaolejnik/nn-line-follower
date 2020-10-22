@@ -1,5 +1,7 @@
 import json
 
+from robot.basic_movement import Movement
+
 
 class MovementManager:
     def __init__(self):
