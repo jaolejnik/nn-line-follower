@@ -16,9 +16,12 @@ FIND_TRACK_ACTIONS = [
 
 
 class ActiveSensor(Enum):
-    LEFT = (1, 0)
-    RIGHT = (0, 1)
-    BOTH = (1, 1)
+    NONE = (0, 0, 0, 0)
+    FAR_LEFT = (1, 0, 0, 0)
+    LEFT = (0, 1, 0, 0)
+    RIGHT = (0, 0, 1, 0)
+    FAR_RIGHT = (0, 0, 0, 1)
+    BOTH_MAIN = (0, 1, 1, 0)
 
 
 class LineFollower:
@@ -28,7 +31,7 @@ class LineFollower:
 
         self.line_sensors = LineSensors
         self.collision_sensors = CollisionSensors
-        self.last_active_line_sensor = ActiveSensor.BOTH
+        self.last_active_line_sensor = ActiveSensor.BOTH_MAIN
         self.lost = False
         self.action_manager = MovementManager()
         self.timer = Timer()
@@ -60,6 +63,10 @@ class LineFollower:
             time=self.action_time,
         )
 
+    def sharp_turn(self, direction_x):
+        while not LineSensors.one_of_main_active():
+            self.rotate(direction_x)
+
     def get_back_on_track(self):
         if self.last_active_line_sensor == ActiveSensor.RIGHT:
             while not self.line_sensors.one_or_more_active():
@@ -69,7 +76,7 @@ class LineFollower:
             while not self.line_sensors.one_or_more_active():
                 self.rotate(DirectionX.LEFT)
 
-        if self.last_active_line_sensor == ActiveSensor.BOTH:
+        if self.last_active_line_sensor == ActiveSensor.BOTH_MAIN:
             while not self.line_sensors.one_or_more_active():
                 self.move(DirectionY.REVERSE)
 
@@ -81,17 +88,25 @@ class LineFollower:
             self.lost = not self.line_sensors.one_or_more_active()
 
     def follow_line(self):
-        if self.line_sensors.both_active():
+        if self.line_sensors.both_main_active():
             self.move(DirectionY.FORWARD)
-            self.last_active_line_sensor = ActiveSensor.BOTH
+            self.last_active_line_sensor = ActiveSensor.BOTH_MAIN
 
-        if self.line_sensors.only_right_active():
+        if self.line_sensors.only_right_of_main_active():
             self.turn(DirectionX.RIGHT)
             self.last_active_line_sensor = ActiveSensor.RIGHT
 
-        if self.line_sensors.only_left_active():
+        if self.line_sensors.only_left_of_main_active():
             self.turn(DirectionX.LEFT)
             self.last_active_line_sensor = ActiveSensor.LEFT
+
+        if self.line_sensors.only_far_left_active():
+            self.sharp_turn(DirectionX.LEFT)
+            self.last_active_line_sensor = ActiveSensor.FAR_LEFT
+
+        if self.line_sensors.only_far_right_active():
+            self.sharp_turn(DirectionX.RIGHT)
+            self.last_active_line_sensor = ActiveSensor.FAR_RIGHT
 
     def run(self):
         while True:
