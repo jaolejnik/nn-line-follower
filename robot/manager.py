@@ -24,7 +24,10 @@ class MovementManager:
 
     def reverse_actions(self):
         for action in self.data["actions"]:
-            action["args"]["direction_y"] = not action["args"]["direction_y"]
+            if action["type"] == "rotate":
+                action["args"]["direction_x"] = not action["args"]["direction_x"]
+            else:
+                action["args"]["direction_y"] = not action["args"]["direction_y"]
         self.data["actions"].reverse()
 
     def perform_action(self, action, **kwargs):

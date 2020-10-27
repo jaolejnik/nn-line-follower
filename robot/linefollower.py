@@ -1,6 +1,8 @@
 from enum import Enum
 from time import sleep
 
+import Pyro4
+
 from utils.timer import Timer
 
 from .basic_movement import DirectionX, DirectionY, Movement
@@ -10,7 +12,7 @@ from .sensors import CollisionSensors, LineSensors
 FIND_TRACK_ACTIONS = [
     "Movement.move(DirectionY.FORWARD, self.base_speed, self.action_time*5)",
     "Movement.move(DirectionY.REVERSE, self.base_speed, self.action_time*5)",
-    "Movement.rotate(DirectionX.RIGHT, self.base_speed, self.action_time*5)",
+    "Movement.rotate(DirectionX.RIGHT, self.base_speed, self.action_time)",
     # "sleep(self.action_time*5)",
 ]
 
@@ -24,6 +26,7 @@ class ActiveSensor(Enum):
     BOTH_MAIN = (0, 1, 1, 0)
 
 
+@Pyro4.expose
 class LineFollower:
     def __init__(self, base_speed, action_time):
         self.base_speed = base_speed
@@ -68,6 +71,7 @@ class LineFollower:
             self.rotate(direction_x)
 
     def get_back_on_track(self):
+        print("Get back on track")
         if self.last_active_line_sensor == ActiveSensor.RIGHT:
             while not self.line_sensors.one_or_more_active():
                 self.rotate(DirectionX.RIGHT)
@@ -81,6 +85,7 @@ class LineFollower:
                 self.move(DirectionY.REVERSE)
 
     def find_track(self):
+        print("Find track")
         for action in FIND_TRACK_ACTIONS:
             if not self.lost:
                 break
@@ -88,6 +93,7 @@ class LineFollower:
             self.lost = not self.line_sensors.one_or_more_active()
 
     def follow_line(self):
+        print("Follow line")
         if self.line_sensors.both_main_active():
             self.move(DirectionY.FORWARD)
             self.last_active_line_sensor = ActiveSensor.BOTH_MAIN
@@ -109,7 +115,7 @@ class LineFollower:
             self.last_active_line_sensor = ActiveSensor.FAR_RIGHT
 
     def run(self):
-        while True:
+        while self.collision_sensors.front_distance() > 5.0:
             if not self.lost:
                 self.follow_line()
                 if not self.line_sensors.one_or_more_active():
