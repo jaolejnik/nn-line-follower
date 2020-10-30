@@ -1,4 +1,3 @@
-from robot.basic_movement import DirectionY
 from robot.linefollower import LineFollower
 
 robot = LineFollower(100, 0.05)

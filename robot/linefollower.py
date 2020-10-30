@@ -3,9 +3,10 @@ from time import sleep
 
 import Pyro4
 
+from utils.enums import ActiveSensor, DirectionX, DirectionY
 from utils.timer import Timer
 
-from .basic_movement import DirectionX, DirectionY, Movement
+from .basic_movement import Movement
 from .manager import MovementManager
 from .sensors import CollisionSensors, LineSensors
 
@@ -15,15 +16,6 @@ FIND_TRACK_ACTIONS = [
     "Movement.rotate(DirectionX.RIGHT, self.base_speed, self.action_time)",
     # "sleep(self.action_time*5)",
 ]
-
-
-class ActiveSensor(Enum):
-    NONE = (0, 0, 0, 0)
-    FAR_LEFT = (1, 0, 0, 0)
-    LEFT = (0, 1, 0, 0)
-    RIGHT = (0, 0, 1, 0)
-    FAR_RIGHT = (0, 0, 0, 1)
-    BOTH_MAIN = (0, 1, 1, 0)
 
 
 @Pyro4.expose
@@ -67,7 +59,7 @@ class LineFollower:
         )
 
     def sharp_turn(self, direction_x):
-        while not LineSensors.one_of_main_active():
+        while not self.line_sensors.one_of_main_active():
             self.rotate(direction_x)
 
     def get_back_on_track(self):

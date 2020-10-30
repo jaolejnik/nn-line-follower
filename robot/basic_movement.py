@@ -1,7 +1,8 @@
-from enum import IntEnum
 from time import sleep
 
 import RPi.GPIO as GPIO
+
+from utils.enums import DirectionX, DirectionY
 
 # ----- CONSTANTS -----
 PWM_FREQ = 100
@@ -46,17 +47,6 @@ def motor_b_negative(signal):
 
 def stop_motors():
     GPIO.output(22, GPIO.LOW)
-
-
-# ----- ENUMS -----
-class DirectionX(IntEnum):
-    LEFT = 0
-    RIGHT = 1
-
-
-class DirectionY(IntEnum):
-    REVERSE = 0
-    FORWARD = 1
 
 
 # ----- MOTORS METHODS -----
