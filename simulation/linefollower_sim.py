@@ -33,9 +33,6 @@ class SimLineFollower:
             self.get_back_on_track()
 
     def follow_line(self, pixel_array):
-        print("ELO")
-        self.line_sensors.get_readings(pixel_array)
-
         if self.line_sensors.both_main_active():
             self.move(DirectionY.FORWARD)
             self.last_active_line_sensor = ActiveSensor.BOTH_MAIN
@@ -56,6 +53,7 @@ class SimLineFollower:
             self.sharp_turn(DirectionX.RIGHT, pixel_array)
             self.last_active_line_sensor = ActiveSensor.FAR_RIGHT
 
+        self.line_sensors.get_readings(pixel_array)
         print(self.line_sensors.state)
 
     def get_back_on_track(self):

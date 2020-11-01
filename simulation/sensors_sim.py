@@ -6,7 +6,7 @@ class SimLineSensors:
     def __init__(self, distance_form_center, robot_center, robot_angle):
         self.distance = distance_form_center
         self.set_positions(robot_center, robot_angle)
-        self.state = (0, 0, 0, 0)
+        self.state = (0, 1, 1, 0)
 
     def set_positions(self, robot_center, robot_angle):
         self.positions = []
