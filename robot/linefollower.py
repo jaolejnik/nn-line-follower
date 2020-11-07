@@ -3,7 +3,7 @@ from time import sleep
 
 import Pyro4
 
-from utils.enums import ActiveSensor, DirectionX, DirectionY
+from utils.enums import ActiveSensors, DirectionX, DirectionY
 from utils.timer import Timer
 
 from .basic_movement import Movement
@@ -26,7 +26,7 @@ class LineFollower:
 
         self.line_sensors = LineSensors
         self.collision_sensors = CollisionSensors
-        self.last_active_line_sensor = ActiveSensor.BOTH_MAIN
+        self.last_active_line_sensor = ActiveSensors.BOTH_MAIN
         self.lost = False
         self.action_manager = MovementManager()
         self.timer = Timer()
@@ -64,15 +64,15 @@ class LineFollower:
 
     def get_back_on_track(self):
         print("Get back on track")
-        if self.last_active_line_sensor == ActiveSensor.RIGHT:
+        if self.last_active_line_sensor == ActiveSensors.RIGHT:
             while not self.line_sensors.one_or_more_active():
                 self.rotate(DirectionX.RIGHT)
 
-        if self.last_active_line_sensor == ActiveSensor.LEFT:
+        if self.last_active_line_sensor == ActiveSensors.LEFT:
             while not self.line_sensors.one_or_more_active():
                 self.rotate(DirectionX.LEFT)
 
-        if self.last_active_line_sensor == ActiveSensor.BOTH_MAIN:
+        if self.last_active_line_sensor == ActiveSensors.BOTH_MAIN:
             while not self.line_sensors.one_or_more_active():
                 self.move(DirectionY.REVERSE)
 
@@ -88,23 +88,23 @@ class LineFollower:
         print("Follow line")
         if self.line_sensors.both_main_active():
             self.move(DirectionY.FORWARD)
-            self.last_active_line_sensor = ActiveSensor.BOTH_MAIN
+            self.last_active_line_sensor = ActiveSensors.BOTH_MAIN
 
         if self.line_sensors.only_right_of_main_active():
             self.turn(DirectionX.RIGHT)
-            self.last_active_line_sensor = ActiveSensor.RIGHT
+            self.last_active_line_sensor = ActiveSensors.RIGHT
 
         if self.line_sensors.only_left_of_main_active():
             self.turn(DirectionX.LEFT)
-            self.last_active_line_sensor = ActiveSensor.LEFT
+            self.last_active_line_sensor = ActiveSensors.LEFT
 
         if self.line_sensors.only_far_left_active():
             self.sharp_turn(DirectionX.LEFT)
-            self.last_active_line_sensor = ActiveSensor.FAR_LEFT
+            self.last_active_line_sensor = ActiveSensors.FAR_LEFT
 
         if self.line_sensors.only_far_right_active():
             self.sharp_turn(DirectionX.RIGHT)
-            self.last_active_line_sensor = ActiveSensor.FAR_RIGHT
+            self.last_active_line_sensor = ActiveSensors.FAR_RIGHT
 
     def run(self):
         while self.collision_sensors.front_distance() > 5.0:

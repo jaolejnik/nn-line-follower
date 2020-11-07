@@ -12,6 +12,7 @@ isort = "*"
 pygame = "*"
 pyro4 = "*"
 numpy = "*"
+pandas = "*"
 
 [requires]
 python_version = "3.7"

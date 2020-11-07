@@ -3,7 +3,7 @@ import os
 import pygame as pg
 from pygame.math import Vector2
 
-from utils.enums import ActiveSensor, DirectionX, DirectionY
+from utils.enums import ActiveSensors, DirectionX, DirectionY
 from utils.timer import Timer
 
 from .sensors_sim import SimLineSensors
@@ -21,7 +21,7 @@ class SimLineFollower:
             self.rect.center,
             self.angle,
         )
-        self.last_active_line_sensor = ActiveSensor.BOTH_MAIN
+        self.last_active_line_sensor = ActiveSensors.BOTH_MAIN
 
     def draw(self, display):
         display.blit(self.surface_to_draw, self.rect)
@@ -35,38 +35,38 @@ class SimLineFollower:
     def follow_line(self, pixel_array):
         if self.line_sensors.both_main_active():
             self.move(DirectionY.FORWARD)
-            self.last_active_line_sensor = ActiveSensor.BOTH_MAIN
+            self.last_active_line_sensor = ActiveSensors.BOTH_MAIN
 
         elif self.line_sensors.only_right_of_main_active():
             self.turn(DirectionX.RIGHT)
-            self.last_active_line_sensor = ActiveSensor.RIGHT
+            self.last_active_line_sensor = ActiveSensors.RIGHT
 
         elif self.line_sensors.only_left_of_main_active():
             self.turn(DirectionX.LEFT)
-            self.last_active_line_sensor = ActiveSensor.LEFT
+            self.last_active_line_sensor = ActiveSensors.LEFT
 
         elif self.line_sensors.only_far_left_active():
             self.sharp_turn(DirectionX.LEFT, pixel_array)
-            self.last_active_line_sensor = ActiveSensor.FAR_LEFT
+            self.last_active_line_sensor = ActiveSensors.FAR_LEFT
 
         elif self.line_sensors.only_far_right_active():
             self.sharp_turn(DirectionX.RIGHT, pixel_array)
-            self.last_active_line_sensor = ActiveSensor.FAR_RIGHT
+            self.last_active_line_sensor = ActiveSensors.FAR_RIGHT
 
         self.line_sensors.get_readings(pixel_array)
-        print(self.line_sensors.state)
+        # print(self.line_sensors.state)
 
     def get_back_on_track(self):
-        print("Get back on track")
-        if self.last_active_line_sensor == ActiveSensor.RIGHT:
+        # print("Get back on track")
+        if self.last_active_line_sensor == ActiveSensors.RIGHT:
             if not self.line_sensors.one_or_more_active():
                 self.rotate(DirectionX.RIGHT)
 
-        if self.last_active_line_sensor == ActiveSensor.LEFT:
+        if self.last_active_line_sensor == ActiveSensors.LEFT:
             if not self.line_sensors.one_or_more_active():
                 self.rotate(DirectionX.LEFT)
 
-        if self.last_active_line_sensor == ActiveSensor.BOTH_MAIN:
+        if self.last_active_line_sensor == ActiveSensors.BOTH_MAIN:
             if not self.line_sensors.one_or_more_active():
                 self.move(DirectionY.REVERSE)
 
@@ -82,7 +82,7 @@ class SimLineFollower:
         self.line_sensors.set_positions(self.rect.center, self.angle)
 
     def move(self, direction_y):
-        print("MOVE", self.line_sensors.state)
+        # print("MOVE", self.line_sensors.state)
         if direction_y == DirectionY.FORWARD:
             distance = 5
         else:
@@ -93,7 +93,7 @@ class SimLineFollower:
         self.line_sensors.set_positions(self.rect.center, self.angle)
 
     def turn(self, direction_x):
-        print("TURN", self.line_sensors.state)
+        # print("TURN", self.line_sensors.state)
         self.rotate(direction_x)
         self.move(DirectionY.FORWARD)
 

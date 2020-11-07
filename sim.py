@@ -1,7 +1,6 @@
-from simulation.sim_env import SimEnv
+from learning.q_learning import QLearningClient
 from utils.enums import Actions
 
-simulation = SimEnv()
+q_learn = QLearningClient()
 
-for i in range(50):
-    simulation.step(Actions.MOVE_FORWARD)
+q_learn.learn(1000, 1000000)

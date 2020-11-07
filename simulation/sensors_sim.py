@@ -7,6 +7,7 @@ class SimLineSensors:
         self.distance = distance_form_center
         self.set_positions(robot_center, robot_angle)
         self.state = (0, 1, 1, 0)
+        self.finish = False
 
     def set_positions(self, robot_center, robot_angle):
         self.positions = []
@@ -84,5 +85,13 @@ class SimLineSensors:
     def both_main_active(self):
         return self.left() and self.right()
 
+    def is_finish(self, pixel_array):
+        for i in range(4):
+            if pixel_array[self.positions[i]] == 4278255360:
+                self.finish = True
+
     def get_readings(self, pixel_array):
-        self.state = [pixel_array[self.positions[i]] == 4278190080 for i in range(4)]
+        self.state = tuple(
+            [pixel_array[self.positions[i]] == 4278190080 for i in range(4)]
+        )
+        self.is_finish(pixel_array)
