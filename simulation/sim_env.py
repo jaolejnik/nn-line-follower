@@ -22,7 +22,7 @@ class SimEnv:
         self.display = pg.display.set_mode(self.track.get_size())
         self.robot = SimLineFollower((150, self.track.get_size()[1] - 70), 0.5)
         self.running = True
-        self.state_memory_size = 20
+        self.state_memory_size = 15
         self.last_n_states = []
 
     def step(self, action, episode_info):
@@ -63,7 +63,6 @@ class SimEnv:
 
     def all_saved_states_eq(self, state):
         count = 0
-        # print(self.last_n_states)
         for saved_state in self.last_n_states:
             if saved_state == state.value:
                 count += 1
@@ -79,22 +78,25 @@ class SimEnv:
             reward = 15
 
         elif state == ActiveSensors.LEFT.value and action == Actions.TURN_LEFT:
-            reward = 15
-
-        elif state == ActiveSensors.RIGHT.value and action == Actions.TURN_RIGHT:
-            reward = 15
+            reward = 10
 
         elif (
-            state == ActiveSensors.FAR_LEFT.value
+            state in [ActiveSensors.RIGHT.value, ActiveSensors.BOTH_RIGHT.value]
+            and action == Actions.TURN_RIGHT
+        ):
+            reward = 10
+
+        elif (
+            state in [ActiveSensors.FAR_LEFT.value, ActiveSensors.BOTH_LEFT.value]
             or last_active_sensor == ActiveSensors.FAR_LEFT
         ) and action == Actions.ROTATE_LEFT:
-            reward = 15
+            reward = 20
 
         elif (
-            state == ActiveSensors.FAR_RIGHT.value
+            state in [ActiveSensors.FAR_RIGHT.value, ActiveSensors.BOTH_RIGHT.value]
             or last_active_sensor == ActiveSensors.FAR_RIGHT
         ) and action == Actions.ROTATE_RIGHT:
-            reward = 15
+            reward = 20
 
         return reward
 

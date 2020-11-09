@@ -13,7 +13,8 @@ class SimLineSensors:
         self.positions = []
         offset_angle = 25
         for i in range(4):
-            sensor = robot_center + Vector2(self.distance, 0).rotate(
+            distance = 0.95 * self.distance if i in [0, 3] else self.distance
+            sensor = robot_center + Vector2(distance, 0).rotate(
                 robot_angle - offset_angle
             )
             self.positions.append(tuple(map(int, sensor)))

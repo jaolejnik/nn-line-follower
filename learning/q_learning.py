@@ -37,10 +37,8 @@ class QLearningClient:
         return self.q_table[state][action_key]
 
     def print_q_table(self):
-        # print(self.q_table[(0, 0, 0, 0)])
         print(pd.DataFrame.from_dict(self.q_table))
         print()
-        # system("clear")
 
     def learn(self, num_episodes, max_steps_per_episode):
         for episode in range(num_episodes):

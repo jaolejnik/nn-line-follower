@@ -54,10 +54,8 @@ class SimLineFollower:
             self.last_active_line_sensor = ActiveSensors.FAR_RIGHT
 
         self.line_sensors.get_readings(pixel_array)
-        # print(self.line_sensors.state)
 
     def get_back_on_track(self):
-        # print("Get back on track")
         if self.last_active_line_sensor == ActiveSensors.RIGHT:
             if not self.line_sensors.one_or_more_active():
                 self.rotate(DirectionX.RIGHT)
@@ -71,7 +69,6 @@ class SimLineFollower:
                 self.move(DirectionY.REVERSE)
 
     def rotate(self, direction_x):
-        # print("ROTATE", self.line_sensors.state)
         if direction_x == DirectionX.RIGHT:
             angle_change = 1
         else:
@@ -82,7 +79,6 @@ class SimLineFollower:
         self.line_sensors.set_positions(self.rect.center, self.angle)
 
     def move(self, direction_y):
-        # print("MOVE", self.line_sensors.state)
         if direction_y == DirectionY.FORWARD:
             distance = 5
         else:
@@ -93,7 +89,6 @@ class SimLineFollower:
         self.line_sensors.set_positions(self.rect.center, self.angle)
 
     def turn(self, direction_x):
-        # print("TURN", self.line_sensors.state)
         self.rotate(direction_x)
         self.move(DirectionY.FORWARD)
 

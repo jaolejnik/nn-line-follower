@@ -34,7 +34,6 @@ class MovementManager:
         action_type = action if type(action) == str else action.__name__
         arg_string = ", ".join([f"{key}={value}" for key, value in kwargs.items()])
         command = f"Movement.{action_type}({arg_string})"
-        # print(command)
         eval(command)
 
     def perform_saved_actions(self):
