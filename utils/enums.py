@@ -32,11 +32,7 @@ class ActiveSensors(Enum):
 
 class Actions(Enum):
     MOVE_FORWARD = "move forward"
-    # MOVE_REVERSE = "move reverse"
     TURN_LEFT = "turn left"
     TURN_RIGHT = "turn right"
     ROTATE_LEFT = "rotate left"
     ROTATE_RIGHT = "rotate right"
-    # SHARP_TURN_LEFT = "sharp turn left"
-    # SHARP_TURN_RIGHT = "sharp turn right"
-    # GET_BACK_ON_TRACK = "get back on track"

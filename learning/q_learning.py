@@ -10,7 +10,7 @@ from utils.enums import Actions, ActiveSensors
 
 class QLearningClient:
     def __init__(self):
-        self.init_q_table()
+        self._init_q_table()
         self.env = SimEnv()
 
         self.rewards_all_episodes = []
@@ -22,7 +22,7 @@ class QLearningClient:
         self.min_exploration_rate = 0.1
         self.exploration_decay_rate = 0.01
 
-    def init_q_table(self):
+    def _init_q_table(self):
         self.q_table = {}
         for state in ActiveSensors:
             self.q_table[state.value] = {}

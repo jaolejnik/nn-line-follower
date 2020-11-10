@@ -4,12 +4,10 @@ import RPi.GPIO as GPIO
 
 from utils.enums import DirectionX, DirectionY
 
-# ----- CONSTANTS -----
 PWM_FREQ = 100
 MOTORS_IDS = ("RIGHT", "LEFT")
 
 
-# ----- SETUP BOARD -----
 GPIO.setmode(GPIO.BOARD)
 GPIO.setwarnings(False)
 
@@ -28,7 +26,6 @@ pwm_a.start(100)
 pwm_b.start(100)
 
 
-# ----- MOTOR FUNCTIONS -----
 def motor_a_positive(signal):
     GPIO.output(16, signal)
 
@@ -49,7 +46,6 @@ def stop_motors():
     GPIO.output(22, GPIO.LOW)
 
 
-# ----- MOTORS METHODS -----
 class Motors:
     right = {"+": motor_a_positive, "-": motor_a_negative, "PWM": pwm_a}
     left = {"+": motor_b_positive, "-": motor_b_negative, "PWM": pwm_b}
@@ -71,7 +67,6 @@ class Motors:
         Motors.motor_switch(motor_id)["PWM"].ChangeDutyCycle(speed)
 
 
-# ----- MOVEMENT METHODS -----
 class Movement:
     """
     Basic movement methods.
