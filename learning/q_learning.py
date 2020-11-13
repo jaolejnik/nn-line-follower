@@ -1,4 +1,3 @@
-import random
 from os import system
 
 import numpy as np
@@ -55,7 +54,7 @@ class QLearningClient:
                     print(
                         "EPLORATION", self.exploration_rate, exploration_rate_threshold
                     )
-                    action = random.choice([action for action in Actions])
+                    action = np.random.choice([action for action in Actions])
 
                 new_state, reward, done = self.env.step(action, (episode, step))
 

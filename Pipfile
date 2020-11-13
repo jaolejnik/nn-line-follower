@@ -13,6 +13,7 @@ pygame = "*"
 pyro4 = "*"
 numpy = "*"
 pandas = "*"
+tensorflow = "*"
 
 [requires]
 python_version = "3.7"
