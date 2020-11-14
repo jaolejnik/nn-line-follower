@@ -24,7 +24,7 @@ class ReplayBuffer:
         )
 
     def _are_valid_keys(self, keys):
-        for key in keys():
+        for key in keys:
             assert key in self.VALID_KEYS, "Invalid key for saving a value to history."
 
     def save_to_history(self, **kwargs):
@@ -70,7 +70,7 @@ class ReplayBuffer:
             del self.state_history[:1]
 
         if kwargs["next_state"]:
-            del self.state_next_history[:1]
+            del self.next_state_history[:1]
 
         if kwargs["reward"]:
             del self.rewards_history[:1]

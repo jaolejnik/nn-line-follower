@@ -1,12 +1,15 @@
 import numpy as np
 import tensorflow as tf
 from tensorflow import keras
-from tensorflow.keras import layers
 
 from simulation.sim_env import SimEnv
 from utils.enums import Actions, ActiveSensors
 
+from .neural_network import create_q_model
 from .replay_buffer import ReplayBuffer
+
+ACTION_LIST = [action for action in Actions]
+NUMBER_OF_ACTIONS = len(ACTION_LIST)
 
 
 class DeepQLearningClient:
@@ -32,13 +35,12 @@ class DeepQLearningClient:
         self.random_steps = 50000
         self.greedy_steps = 100000
 
-        self.number_of_actions = len([action for action in Actions])
         self.update_after_actions = 5
         self.update_target_after_actions = 10000
 
     def _init_q_models(self):
-        self.model = None
-        self.target_model = None
+        self.model = create_q_model()
+        self.target_model = create_q_model()
 
     def _update_greed_rate(self):
         self.greed_rate -= (self.greed_max - self.greed_min) / self.greedy_steps
@@ -59,7 +61,7 @@ class DeepQLearningClient:
                     self.steps_count < self.random_steps
                     or self.greed_rate > np.random.rand(1)[0]
                 ):
-                    action = np.random.choice([action for action in Actions])
+                    action = np.random.choice([i for i in range(NUMBER_OF_ACTIONS)])
                 else:
                     state_tensor = tf.convert_to_tensor(state)
                     action_probs = self.model(state_tensor, training=False)
@@ -67,7 +69,9 @@ class DeepQLearningClient:
 
                 self._update_greed_rate()
 
-                next_state, reward, done = self.env.step(action, (episode, timestep))
+                next_state, reward, done = self.sim_env.step(
+                    ACTION_LIST[action], (episode_count, timestep)
+                )
 
                 episode_reward += reward
 
@@ -99,22 +103,20 @@ class DeepQLearningClient:
                     ) = self.replay_buffer.get_samples(indices)
 
                     future_rewards = self.target_model.predict(next_state_sample)
-
                     updated_q_values = (
                         rewards_sample
-                        + self.discount_rate * tf.reduce_max(future_rewards, axis=1)
+                        + self.discount_rate
+                        * tf.reduce_max(tf.reduce_max(future_rewards, axis=1), axis=1)
                     )
 
                     updated_q_values = (
                         updated_q_values * (1 - done_sample) - done_sample
                     )
 
-                    masks = tf.one_hot(
-                        action_sample,
-                    )
+                    masks = tf.one_hot(action_sample, NUMBER_OF_ACTIONS)
 
                     with tf.GradientTape() as tape:
-                        q_values = self.model(state_sample)
+                        q_values = tf.reduce_max(self.model(state_sample), axis=1)
                         q_action = tf.reduce_sum(tf.multiply(q_values, masks), axis=1)
                         loss = self.loss_function(updated_q_values, q_action)
 

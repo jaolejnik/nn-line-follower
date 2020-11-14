@@ -1,6 +1,6 @@
-from learning.q_learning import QLearningClient
+from learning.dqn.deep_q_learning import DeepQLearningClient
 from utils.enums import Actions
 
-q_learn = QLearningClient()
+q_learn = DeepQLearningClient()
 
-q_learn.learn(1000, 1000000)
+q_learn.learn()
