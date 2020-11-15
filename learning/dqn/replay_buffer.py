@@ -63,23 +63,29 @@ class ReplayBuffer:
         if self.rewards_history_size() <= self.max_memory_length:
             return
 
-        if kwargs["action"]:
-            del self.action_history[:1]
+        if "action" in kwargs.keys():
+            if kwargs["action"]:
+                del self.action_history[:1]
 
-        if kwargs["state"]:
-            del self.state_history[:1]
+        if "state" in kwargs.keys():
+            if kwargs["state"]:
+                del self.state_history[:1]
 
-        if kwargs["next_state"]:
-            del self.next_state_history[:1]
+        if "next_state" in kwargs.keys():
+            if kwargs["next_state"]:
+                del self.next_state_history[:1]
 
-        if kwargs["reward"]:
-            del self.rewards_history[:1]
+        if "reward" in kwargs.keys():
+            if kwargs["reward"]:
+                del self.rewards_history[:1]
 
-        if kwargs["episode_reward"]():
-            del self.episode_rewards_history[:1]
+        if "episode_reward" in kwargs.keys():
+            if kwargs["episode_reward"]:
+                del self.episode_rewards_history[:1]
 
-        if kwargs["done"]:
-            del self.done_history[:1]
+        if "done" in kwargs.keys():
+            if kwargs["done"]:
+                del self.done_history[:1]
 
     def episode_rewards_mean(self):
         return np.mean(self.episode_rewards_history)

@@ -109,7 +109,11 @@ class SimEnv:
         del pixel_array
 
         text = self.font.render(
-            f"Episode:{episode_info[0]} Step:{episode_info[1]}", True, (0, 0, 0)
+            f"Episode: {episode_info[0]}"
+            + f"    Step: {episode_info[1]}"
+            + f"    Current reward: {episode_info[2]}",
+            True,
+            (0, 0, 0),
         )
 
         self.display.blit(self.track, (0, 0))

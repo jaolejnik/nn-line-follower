@@ -55,7 +55,7 @@ class DeepQLearningClient:
             episode_count += 1
 
             for timestep in range(self.max_steps_per_episode):
-                self.steps_count += 0
+                self.steps_count += 1
 
                 if (
                     self.steps_count < self.random_steps
@@ -70,7 +70,7 @@ class DeepQLearningClient:
                 self._update_greed_rate()
 
                 next_state, reward, done = self.sim_env.step(
-                    ACTION_LIST[action], (episode_count, timestep)
+                    ACTION_LIST[action], (episode_count, timestep, episode_reward)
                 )
 
                 episode_reward += reward
@@ -127,8 +127,7 @@ class DeepQLearningClient:
 
                 if self.steps_count % self.update_target_after_actions == 0:
                     self.target_model.set_weights(self.model.get_weights())
-                    print(f"Episode {episode_count}, step {timestep}")
-                    print(f"Running reward: {running_reward:.2f}", end="\n\n")
+                    print(f"UPDATED TARGET MODEL! Running reward: {running_reward:.2f}")
 
                 self.replay_buffer.limit_history(
                     action=True,
