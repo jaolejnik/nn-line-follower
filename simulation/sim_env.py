@@ -52,9 +52,6 @@ class SimEnv:
         if action == Actions.MOVE_FORWARD:
             self.robot.move(DirectionY.FORWARD)
 
-        # elif action == Actions.MOVE_REVERSE:
-        #     self.robot.move(DirectionY.REVERSE)
-
         elif action == Actions.TURN_LEFT:
             self.robot.turn(DirectionX.LEFT)
 
@@ -101,8 +98,9 @@ class SimEnv:
 
         return reward
 
-    def step(self, action, episode_info):
-        self.clock.tick(FPS)
+    def step(self, action, episode_info, visual=True):
+        if visual:
+            self.clock.tick(FPS)
 
         pixel_array = pg.PixelArray(self.track)
         self.perform_action(action, pixel_array)
@@ -115,12 +113,11 @@ class SimEnv:
             True,
             (0, 0, 0),
         )
-
-        self.display.blit(self.track, (0, 0))
-        self.display.blit(text, (0, 0))
-        self.robot.draw(self.display)
-
-        pg.display.update()
+        if visual:
+            self.display.blit(self.track, (0, 0))
+            self.display.blit(text, (0, 0))
+            self.robot.draw(self.display)
+            pg.display.update()
 
         self.save_state(self.robot.line_sensors.state)
 

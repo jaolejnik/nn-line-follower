@@ -32,7 +32,7 @@ class DeepQLearningClient:
         self.batch_size = 32
         self.max_steps_per_episode = 10000
 
-        self.random_steps = 50000
+        self.random_steps = 5000
         self.greedy_steps = 100000
 
         self.update_after_actions = 5
@@ -64,13 +64,17 @@ class DeepQLearningClient:
                     action = np.random.choice([i for i in range(NUMBER_OF_ACTIONS)])
                 else:
                     state_tensor = tf.convert_to_tensor(state)
-                    action_probs = self.model(state_tensor, training=False)
-                    action = tf.argmax(action_probs[0]).numpy()
+                    state_tensor = tf.reshape(state_tensor, (4, 1))
+                    action_probs_matrix = self.model(state_tensor, training=False)
+                    action_probs = tf.reshape(action_probs_matrix[0], (5,))
+                    action = tf.argmax(action_probs)
 
                 self._update_greed_rate()
 
                 next_state, reward, done = self.sim_env.step(
-                    ACTION_LIST[action], (episode_count, timestep, episode_reward)
+                    ACTION_LIST[action],
+                    (episode_count, timestep, episode_reward),
+                    visual=False,
                 )
 
                 episode_reward += reward
@@ -139,6 +143,7 @@ class DeepQLearningClient:
 
                 if done:
                     break
+            print("Episode:", episode_count, "Reward:", episode_reward)
 
             self.replay_buffer.save_to_history(episode_reward=episode_reward)
             self.replay_buffer.limit_history(episode_reward=True)
