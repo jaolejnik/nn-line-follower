@@ -93,7 +93,10 @@ class SimLineSensors:
 
     def get_readings(self, pixel_array):
         # TODO ADD EXCEPTION HANDLIG WHEN INDEX AOUT OF ARRAY
-        self.state = tuple(
-            [pixel_array[self.positions[i]] == 4278190080 for i in range(4)]
-        )
-        self.is_finish(pixel_array)
+        try:
+            self.state = tuple(
+                [pixel_array[self.positions[i]] == 4278190080 for i in range(4)]
+            )
+            self.is_finish(pixel_array)
+        except IndexError:
+            self.finish = True

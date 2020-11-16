@@ -1,3 +1,6 @@
+import os
+from datetime import datetime
+
 import numpy as np
 import tensorflow as tf
 from tensorflow import keras
@@ -8,6 +11,7 @@ from utils.enums import Actions, ActiveSensors
 from .neural_network import create_q_model
 from .replay_buffer import ReplayBuffer
 
+CURRENT_DIR = os.path.dirname(__file__)
 ACTION_LIST = [action for action in Actions]
 NUMBER_OF_ACTIONS = len(ACTION_LIST)
 
@@ -22,7 +26,7 @@ class DeepQLearningClient:
         self.steps_count = 0
 
         self.loss_function = keras.losses.Huber()
-        self.optimizer = keras.optimizers.Adam(learning_rate=0.00025, clipnorm=1.0)
+        self.optimizer = keras.optimizers.Adam(learning_rate=0.01, clipnorm=1.0)
 
     def _init_constants(self):
         self.discount_rate = 0.99
@@ -53,6 +57,8 @@ class DeepQLearningClient:
             state = self.sim_env.reset()
             episode_reward = 0
             episode_count += 1
+            exploration_actions = 0
+            exploitation_actions = 0
 
             for timestep in range(self.max_steps_per_episode):
                 self.steps_count += 1
@@ -62,9 +68,11 @@ class DeepQLearningClient:
                     or self.greed_rate > np.random.rand(1)[0]
                 ):
                     action = np.random.choice([i for i in range(NUMBER_OF_ACTIONS)])
+                    exploration_actions += 1
                 else:
+                    exploitation_actions += 1
                     state_tensor = tf.convert_to_tensor(state)
-                    state_tensor = tf.reshape(state_tensor, (4, 1))
+                    state_tensor = tf.reshape(state_tensor, (1, 4))
                     action_probs_matrix = self.model(state_tensor, training=False)
                     action_probs = tf.reshape(action_probs_matrix[0], (5,))
                     action = tf.argmax(action_probs)
@@ -109,8 +117,7 @@ class DeepQLearningClient:
                     future_rewards = self.target_model.predict(next_state_sample)
                     updated_q_values = (
                         rewards_sample
-                        + self.discount_rate
-                        * tf.reduce_max(tf.reduce_max(future_rewards, axis=1), axis=1)
+                        + self.discount_rate * tf.reduce_max(future_rewards, axis=1)
                     )
 
                     updated_q_values = (
@@ -120,7 +127,7 @@ class DeepQLearningClient:
                     masks = tf.one_hot(action_sample, NUMBER_OF_ACTIONS)
 
                     with tf.GradientTape() as tape:
-                        q_values = tf.reduce_max(self.model(state_sample), axis=1)
+                        q_values = self.model(state_sample)
                         q_action = tf.reduce_sum(tf.multiply(q_values, masks), axis=1)
                         loss = self.loss_function(updated_q_values, q_action)
 
@@ -133,22 +140,38 @@ class DeepQLearningClient:
                     self.target_model.set_weights(self.model.get_weights())
                     print(f"UPDATED TARGET MODEL! Running reward: {running_reward:.2f}")
 
-                self.replay_buffer.limit_history(
-                    action=True,
-                    state=True,
-                    next_state=True,
-                    reward=True,
-                    done=True,
-                )
+                if (
+                    self.replay_buffer.rewards_history_size()
+                    > self.replay_buffer.max_memory_length
+                ):
+                    self.replay_buffer.limit_history(
+                        action=True,
+                        state=True,
+                        next_state=True,
+                        reward=True,
+                        done=True,
+                    )
 
                 if done:
                     break
+            print(
+                "Exploration count:",
+                exploration_actions,
+                "Exploitation:",
+                exploitation_actions,
+            )
             print("Episode:", episode_count, "Reward:", episode_reward)
 
             self.replay_buffer.save_to_history(episode_reward=episode_reward)
-            self.replay_buffer.limit_history(episode_reward=True)
+            if (
+                self.replay_buffer.episode_rewards_history_size()
+                > self.replay_buffer.max_memory_length
+            ):
+                self.replay_buffer.limit_history(episode_reward=True)
             running_reward = self.replay_buffer.episode_rewards_mean()
 
-            if running_reward > 500:
+            if running_reward > 5000:
                 print(f"Solved at episode {episode_count}")
+                model_name = f"dqn_linefollower_model_{datetime.now()}"
+                self.model.save(os.path.join(CURRENT_DIR, model_name))
                 break
