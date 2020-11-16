@@ -50,13 +50,54 @@ class DeepQLearningClient:
         self.greed_rate -= (self.greed_max - self.greed_min) / self.greedy_steps
         self.greed_rate = max(self.greed_rate, self.greed_min)
 
+    def _update_model(self):
+        indices = np.random.choice(
+            range(self.replay_buffer.done_history_size()),
+            size=self.batch_size,
+        )
+
+        (
+            state_sample,
+            next_state_sample,
+            rewards_sample,
+            action_sample,
+            done_sample,
+        ) = self.replay_buffer.get_samples(indices)
+
+        future_rewards = self.target_model.predict(next_state_sample)
+        updated_q_values = rewards_sample + self.discount_rate * tf.reduce_max(
+            future_rewards, axis=1
+        )
+
+        updated_q_values = updated_q_values * (1 - done_sample) - done_sample
+
+        masks = tf.one_hot(action_sample, NUMBER_OF_ACTIONS)
+
+        with tf.GradientTape() as tape:
+            q_values = self.model(state_sample)
+            q_action = tf.reduce_sum(tf.multiply(q_values, masks), axis=1)
+            loss = self.loss_function(updated_q_values, q_action)
+
+        grads = tape.gradient(loss, self.model.trainable_variables)
+        self.optimizer.apply_gradients(zip(grads, self.model.trainable_variables))
+
+    def _update_target_model(self):
+        self.target_model.set_weights(self.model.get_weights())
+
+    def _save_model(self):
+        now = datetime.now()
+        base_name = "dqn_linefollower_model_"
+        model_name = base_name + f"{now.date()}_{now.hour}-{now.minute}"
+        self.model.save(os.path.join(CURRENT_DIR, model_name))
+
     def learn(self):
         episode_count = 0
         running_reward = 0
         while True:
+            episode_count += 1
+
             state = self.sim_env.reset()
             episode_reward = 0
-            episode_count += 1
             exploration_actions = 0
             exploitation_actions = 0
 
@@ -101,43 +142,10 @@ class DeepQLearningClient:
                     self.steps_count % self.update_after_actions == 0
                     and self.replay_buffer.done_history_size() > self.batch_size
                 ):
-                    indices = np.random.choice(
-                        range(self.replay_buffer.done_history_size()),
-                        size=self.batch_size,
-                    )
-
-                    (
-                        state_sample,
-                        next_state_sample,
-                        rewards_sample,
-                        action_sample,
-                        done_sample,
-                    ) = self.replay_buffer.get_samples(indices)
-
-                    future_rewards = self.target_model.predict(next_state_sample)
-                    updated_q_values = (
-                        rewards_sample
-                        + self.discount_rate * tf.reduce_max(future_rewards, axis=1)
-                    )
-
-                    updated_q_values = (
-                        updated_q_values * (1 - done_sample) - done_sample
-                    )
-
-                    masks = tf.one_hot(action_sample, NUMBER_OF_ACTIONS)
-
-                    with tf.GradientTape() as tape:
-                        q_values = self.model(state_sample)
-                        q_action = tf.reduce_sum(tf.multiply(q_values, masks), axis=1)
-                        loss = self.loss_function(updated_q_values, q_action)
-
-                    grads = tape.gradient(loss, self.model.trainable_variables)
-                    self.optimizer.apply_gradients(
-                        zip(grads, self.model.trainable_variables)
-                    )
+                    self._update_model()
 
                 if self.steps_count % self.update_target_after_actions == 0:
-                    self.target_model.set_weights(self.model.get_weights())
+                    self._update_target_model()
                     print(f"UPDATED TARGET MODEL! Running reward: {running_reward:.2f}")
 
                 if (
@@ -168,10 +176,10 @@ class DeepQLearningClient:
                 > self.replay_buffer.max_memory_length
             ):
                 self.replay_buffer.limit_history(episode_reward=True)
+
             running_reward = self.replay_buffer.episode_rewards_mean()
 
             if running_reward > 5000:
                 print(f"Solved at episode {episode_count}")
-                model_name = f"dqn_linefollower_model_{datetime.now()}"
-                self.model.save(os.path.join(CURRENT_DIR, model_name))
+                self._save_model()
                 break
