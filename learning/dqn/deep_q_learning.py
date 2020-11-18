@@ -7,6 +7,7 @@ from tensorflow import keras
 
 from simulation.sim_env import SimEnv
 from utils.enums import Actions, ActiveSensors
+from utils.score_logger import ScoreLogger
 
 from .neural_network import create_q_model
 from .replay_buffer import ReplayBuffer
@@ -14,6 +15,10 @@ from .replay_buffer import ReplayBuffer
 CURRENT_DIR = os.path.dirname(__file__)
 ACTION_LIST = [action for action in Actions]
 NUMBER_OF_ACTIONS = len(ACTION_LIST)
+MODEL_NAME = (
+    "dqn_model_"
+    + f"{datetime.now().date()}_{datetime.now().hour}-{datetime.now().minute}"
+)
 
 
 class DeepQLearningClient:
@@ -21,9 +26,8 @@ class DeepQLearningClient:
         self._init_constants()
         self._init_q_models()
         self.replay_buffer = ReplayBuffer()
+        self.score_logger = ScoreLogger(MODEL_NAME, os.path.join(CURRENT_DIR, "scores"))
         self.sim_env = SimEnv()
-
-        self.steps_count = 0
 
         self.loss_function = keras.losses.Huber()
         self.optimizer = keras.optimizers.Adam(learning_rate=0.01, clipnorm=1.0)
@@ -84,17 +88,22 @@ class DeepQLearningClient:
     def _update_target_model(self):
         self.target_model.set_weights(self.model.get_weights())
 
-    def _save_model(self):
-        now = datetime.now()
-        base_name = "dqn_linefollower_model_"
-        model_name = base_name + f"{now.date()}_{now.hour}-{now.minute}"
-        self.model.save(os.path.join(CURRENT_DIR, model_name))
+    def _save_model(self, running_reward):
+        model_dir = os.path.join(CURRENT_DIR, "saved_models", MODEL_NAME)
+        if not os.path.exists(model_dir):
+            os.makedirs(model_dir)
+        self.model.save(os.path.join(model_dir, str(running_reward)))
 
     def learn(self):
+        steps_count = 0
         episode_count = 0
         running_reward = 0
+
         while True:
             episode_count += 1
+
+            visual = not episode_count % 100
+            save = not episode_count % 1000
 
             state = self.sim_env.reset()
             episode_reward = 0
@@ -102,10 +111,10 @@ class DeepQLearningClient:
             exploitation_actions = 0
 
             for timestep in range(self.max_steps_per_episode):
-                self.steps_count += 1
+                steps_count += 1
 
                 if (
-                    self.steps_count < self.random_steps
+                    steps_count < self.random_steps
                     or self.greed_rate > np.random.rand(1)[0]
                 ):
                     action = np.random.choice([i for i in range(NUMBER_OF_ACTIONS)])
@@ -123,7 +132,7 @@ class DeepQLearningClient:
                 next_state, reward, done = self.sim_env.step(
                     ACTION_LIST[action],
                     (episode_count, timestep, episode_reward),
-                    visual=False,
+                    visual=visual,
                 )
 
                 episode_reward += reward
@@ -139,12 +148,12 @@ class DeepQLearningClient:
                 state = next_state
 
                 if (
-                    self.steps_count % self.update_after_actions == 0
+                    steps_count % self.update_after_actions == 0
                     and self.replay_buffer.done_history_size() > self.batch_size
                 ):
                     self._update_model()
 
-                if self.steps_count % self.update_target_after_actions == 0:
+                if steps_count % self.update_target_after_actions == 0:
                     self._update_target_model()
                     print(f"UPDATED TARGET MODEL! Running reward: {running_reward:.2f}")
 
@@ -179,7 +188,19 @@ class DeepQLearningClient:
 
             running_reward = self.replay_buffer.episode_rewards_mean()
 
-            if running_reward > 5000:
-                print(f"Solved at episode {episode_count}")
-                self._save_model()
-                break
+            self.score_logger.save_scores(
+                (
+                    episode_count,
+                    episode_reward,
+                    running_reward,
+                    steps_count,
+                    exploration_actions,
+                    exploitation_actions,
+                    self.greed_rate,
+                )
+            )
+            if save:
+                self._save_model(running_reward)
+                if running_reward > 9000:
+                    print(f"Solved at episode {episode_count}")
+                    break

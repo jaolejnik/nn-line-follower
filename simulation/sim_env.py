@@ -21,7 +21,7 @@ class SimEnv:
         self._init_track()
         self.display = pg.display.set_mode(self.track.get_size())
         self.robot = SimLineFollower((150, self.track.get_size()[1] - 70), 0.5)
-        self.state_memory_size = 15
+        self.state_memory_size = 10
         self.last_n_states = []
 
     def _init_track(self):
