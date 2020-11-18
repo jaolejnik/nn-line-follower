@@ -8,25 +8,26 @@ from tensorflow import keras
 from simulation.sim_env import SimEnv
 from utils.enums import Actions, ActiveSensors
 from utils.score_logger import ScoreLogger
+from utils.score_plotter import ScorePlotter
 
 from .neural_network import create_q_model
 from .replay_buffer import ReplayBuffer
 
-CURRENT_DIR = os.path.dirname(__file__)
+HOME_DIR = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
 ACTION_LIST = [action for action in Actions]
 NUMBER_OF_ACTIONS = len(ACTION_LIST)
-MODEL_NAME = (
-    "dqn_model_"
-    + f"{datetime.now().date()}_{datetime.now().hour}-{datetime.now().minute}"
-)
+MODEL_NAME = f"{datetime.now().date()}_{datetime.now().hour}-{datetime.now().minute}"
 
 
 class DeepQLearningClient:
     def __init__(self):
         self._init_constants()
         self._init_q_models()
+        self.model_dir = os.path.join(HOME_DIR, "saved_data", "dqn", MODEL_NAME)
+
         self.replay_buffer = ReplayBuffer()
-        self.score_logger = ScoreLogger(MODEL_NAME, os.path.join(CURRENT_DIR, "scores"))
+        self.logger = ScoreLogger(MODEL_NAME, self.model_dir)
+        self.plotter = ScorePlotter(MODEL_NAME, self.logger.filepath)
         self.sim_env = SimEnv()
 
         self.loss_function = keras.losses.Huber()
@@ -89,10 +90,9 @@ class DeepQLearningClient:
         self.target_model.set_weights(self.model.get_weights())
 
     def _save_model(self, running_reward):
-        model_dir = os.path.join(CURRENT_DIR, "saved_models", MODEL_NAME)
-        if not os.path.exists(model_dir):
-            os.makedirs(model_dir)
-        self.model.save(os.path.join(model_dir, str(running_reward)))
+        if not os.path.exists(self.model_dir):
+            os.makedirs(self.model_dir)
+        self.model.save(os.path.join(self.model_dir, "models", str(running_reward)))
 
     def learn(self):
         steps_count = 0
@@ -188,7 +188,7 @@ class DeepQLearningClient:
 
             running_reward = self.replay_buffer.episode_rewards_mean()
 
-            self.score_logger.save_scores(
+            self.logger.save_scores(
                 (
                     episode_count,
                     episode_reward,
@@ -203,4 +203,6 @@ class DeepQLearningClient:
                 self._save_model(running_reward)
                 if running_reward > 9000:
                     print(f"Solved at episode {episode_count}")
+                    self.plotter.load_scores()
+                    self.plotter.plot_all()
                     break

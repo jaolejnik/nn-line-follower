@@ -13,11 +13,13 @@ VALUES_TO_LOG = (
 
 class ScoreLogger:
     def __init__(self, name, path=""):
-        self.filepath = os.path.join(path, name + ".csv")
+        self.filepath = os.path.join(path, f"score_{name}.csv")
         self.header = ",".join(VALUES_TO_LOG)
-        self._init_file()
+        self._init_file(path)
 
-    def _init_file(self):
+    def _init_file(self, path):
+        if not os.path.exists(path):
+            os.makedirs(path)
         with open(self.filepath, "w") as f:
             f.write(self.header + "\n")
 
