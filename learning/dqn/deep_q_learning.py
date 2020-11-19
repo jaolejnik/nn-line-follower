@@ -1,5 +1,7 @@
 import os
+import sys
 from datetime import datetime
+from time import sleep
 
 import numpy as np
 import tensorflow as tf
@@ -41,11 +43,11 @@ class DeepQLearningClient:
         self.batch_size = 32
         self.max_steps_per_episode = 10000
 
-        self.random_steps = 5000
+        self.random_steps = 50000
         self.greedy_steps = 100000
 
         self.update_after_actions = 5
-        self.update_target_after_actions = 10000
+        self.update_target_after_actions = 100000
 
     def _init_q_models(self):
         self.model = create_q_model()
@@ -89,15 +91,22 @@ class DeepQLearningClient:
     def _update_target_model(self):
         self.target_model.set_weights(self.model.get_weights())
 
-    def _save_model(self, running_reward):
+    def _save_model(self):
         if not os.path.exists(self.model_dir):
             os.makedirs(self.model_dir)
-        self.model.save(os.path.join(self.model_dir, "models", str(running_reward)))
+        self.model.save(
+            os.path.join(self.model_dir, "models", str(int(self.running_reward)))
+        )
 
-    def learn(self):
+    def _create_plots(self):
+        self.plotter.load_scores()
+        self.plotter.plot_all()
+
+    def _learn(self):
         steps_count = 0
         episode_count = 0
-        running_reward = 0
+        self.running_reward = 0
+        highest_running_reward = 0
 
         while True:
             episode_count += 1
@@ -155,7 +164,9 @@ class DeepQLearningClient:
 
                 if steps_count % self.update_target_after_actions == 0:
                     self._update_target_model()
-                    print(f"UPDATED TARGET MODEL! Running reward: {running_reward:.2f}")
+                    print(
+                        f"UPDATED TARGET MODEL! Running reward: {self.running_reward}"
+                    )
 
                 if (
                     self.replay_buffer.rewards_history_size()
@@ -186,23 +197,40 @@ class DeepQLearningClient:
             ):
                 self.replay_buffer.limit_history(episode_reward=True)
 
-            running_reward = self.replay_buffer.episode_rewards_mean()
+            self.running_reward = self.replay_buffer.episode_rewards_mean()
 
             self.logger.save_scores(
                 (
                     episode_count,
                     episode_reward,
-                    running_reward,
+                    self.running_reward,
                     steps_count,
                     exploration_actions,
                     exploitation_actions,
                     self.greed_rate,
                 )
             )
-            if save:
-                self._save_model(running_reward)
-                if running_reward > 9000:
-                    print(f"Solved at episode {episode_count}")
-                    self.plotter.load_scores()
-                    self.plotter.plot_all()
-                    break
+
+            if save or self.running_reward > highest_running_reward:
+                self._save_model()
+                highest_running_reward = self.running_reward
+
+            if self.running_reward > 9000:
+                print(f"Solved at episode {episode_count}")
+                print("Saving model...")
+                self._save_model()
+                print("creating plots...")
+                self._create_plots()
+                break
+
+    def run(self):
+        try:
+            self._learn()
+        except KeyboardInterrupt:
+            sleep(1)
+            print("\n\n\n")
+            print("Saving model...")
+            self._save_model()
+            print("Creating plots...")
+            self._create_plots()
+            sys.exit()

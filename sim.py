@@ -3,4 +3,4 @@ from utils.enums import Actions
 
 q_learn = DeepQLearningClient()
 
-q_learn.learn()
+q_learn.run()
