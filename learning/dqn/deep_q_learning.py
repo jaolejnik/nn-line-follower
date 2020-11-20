@@ -22,36 +22,40 @@ MODEL_NAME = f"{datetime.now().date()}_{datetime.now().hour}-{datetime.now().min
 
 
 class DeepQLearningClient:
-    def __init__(self):
-        self._init_constants()
-        self._init_q_models()
+    def __init__(self, **kwargs):
+        self.discount_rate = kwargs.get("discount_rate", 0.99)
+        self.greed_rate = kwargs.get("greed_rate", 1.0)
+        self.greed_min = kwargs.get("greed_min", 0.1)
+        self.greed_max = self.greed_rate
+        self.batch_size = kwargs.get("batch_size", 32)
+        self.max_episodes = kwargs.get("max_episodes", 10000)
+        self.max_steps_per_episode = 10000
+
+        self.random_steps = kwargs.get("random_steps", 5000)
+        self.greedy_steps = kwargs.get("greedy_steps", 100000)
+
+        self.running_reward = 0
+        self.highest_running_reward = kwargs.get("highest_running_reward", 3000)
+        self.winning_reward = kwargs.get("winning_reward", 9000)
+
+        self.update_target_after_actions = kwargs.get(
+            "update_target_after_actions", 10000
+        )
+        self.optimizer = kwargs.get("optimizer", keras.optimizers.Adam)(
+            learning_rate=kwargs.get("learning_rate", 0.01), clipnorm=1.0
+        )
+        self.loss_function = keras.losses.Huber()
+
+        self.model = create_q_model()
+        self.target_model = create_q_model()
+
         self.model_dir = os.path.join(HOME_DIR, "saved_data", "dqn", MODEL_NAME)
+        self._save_config_txt(kwargs)
 
         self.replay_buffer = ReplayBuffer()
         self.logger = ScoreLogger(MODEL_NAME, self.model_dir)
         self.plotter = ScorePlotter(MODEL_NAME, self.logger.filepath)
         self.sim_env = SimEnv()
-
-        self.loss_function = keras.losses.Huber()
-        self.optimizer = keras.optimizers.Adam(learning_rate=0.01, clipnorm=1.0)
-
-    def _init_constants(self):
-        self.discount_rate = 0.99
-        self.greed_rate = 1.0
-        self.greed_min = 0.1
-        self.greed_max = 1.0
-        self.batch_size = 32
-        self.max_steps_per_episode = 10000
-
-        self.random_steps = 50000
-        self.greedy_steps = 100000
-
-        self.update_after_actions = 5
-        self.update_target_after_actions = 100000
-
-    def _init_q_models(self):
-        self.model = create_q_model()
-        self.target_model = create_q_model()
 
     def _update_greed_rate(self):
         self.greed_rate -= (self.greed_max - self.greed_min) / self.greedy_steps
@@ -91,6 +95,14 @@ class DeepQLearningClient:
     def _update_target_model(self):
         self.target_model.set_weights(self.model.get_weights())
 
+    def _save_config_txt(self, config_dict):
+        if not os.path.exists(self.model_dir):
+            os.makedirs(self.model_dir)
+        config_file = os.path.join(self.model_dir, "config.txt")
+        with open(config_file, "w") as f:
+            for key, value in config_dict.items():
+                f.write(f"{key} = {value}\n")
+
     def _save_model(self):
         if not os.path.exists(self.model_dir):
             os.makedirs(self.model_dir)
@@ -104,20 +116,15 @@ class DeepQLearningClient:
 
     def _learn(self):
         steps_count = 0
-        episode_count = 0
-        self.running_reward = 0
-        highest_running_reward = 0
 
-        while True:
-            episode_count += 1
-
-            visual = not episode_count % 100
-            save = not episode_count % 1000
-
+        for episode in range(1, self.max_episodes + 1):
             state = self.sim_env.reset()
             episode_reward = 0
             exploration_actions = 0
             exploitation_actions = 0
+
+            visual = not episode % 100
+            save = not episode % 500
 
             for timestep in range(self.max_steps_per_episode):
                 steps_count += 1
@@ -140,7 +147,7 @@ class DeepQLearningClient:
 
                 next_state, reward, done = self.sim_env.step(
                     ACTION_LIST[action],
-                    (episode_count, timestep, episode_reward),
+                    (episode, timestep, episode_reward),
                     visual=visual,
                 )
 
@@ -156,10 +163,7 @@ class DeepQLearningClient:
 
                 state = next_state
 
-                if (
-                    steps_count % self.update_after_actions == 0
-                    and self.replay_buffer.done_history_size() > self.batch_size
-                ):
+                if self.replay_buffer.done_history_size() > self.batch_size:
                     self._update_model()
 
                 if steps_count % self.update_target_after_actions == 0:
@@ -188,7 +192,7 @@ class DeepQLearningClient:
                 "Exploitation:",
                 exploitation_actions,
             )
-            print("Episode:", episode_count, "Reward:", episode_reward)
+            print("Episode:", episode, "Reward:", episode_reward)
 
             self.replay_buffer.save_to_history(episode_reward=episode_reward)
             if (
@@ -201,7 +205,7 @@ class DeepQLearningClient:
 
             self.logger.save_scores(
                 (
-                    episode_count,
+                    episode,
                     episode_reward,
                     self.running_reward,
                     steps_count,
@@ -211,12 +215,12 @@ class DeepQLearningClient:
                 )
             )
 
-            if save or self.running_reward > highest_running_reward:
+            if save and self.running_reward > self.highest_running_reward:
                 self._save_model()
-                highest_running_reward = self.running_reward
+                self.highest_running_reward = self.running_reward
 
-            if self.running_reward > 9000:
-                print(f"Solved at episode {episode_count}")
+            if self.running_reward > self.winning_reward:
+                print(f"Solved at episode {episode}")
                 print("Saving model...")
                 self._save_model()
                 print("creating plots...")
