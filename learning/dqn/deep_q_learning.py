@@ -8,7 +8,7 @@ import tensorflow as tf
 from tensorflow import keras
 
 from simulation.sim_env import SimEnv
-from utils.enums import Actions, ActiveSensors
+from utils.enums import ACTION_LIST, Actions, ActiveSensors
 from utils.score_logger import ScoreLogger
 from utils.score_plotter import ScorePlotter
 
@@ -16,28 +16,28 @@ from .neural_network import create_q_model
 from .replay_buffer import ReplayBuffer
 
 HOME_DIR = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
-ACTION_LIST = [action for action in Actions]
 NUMBER_OF_ACTIONS = len(ACTION_LIST)
 MODEL_NAME = f"{datetime.now().date()}_{datetime.now().hour}-{datetime.now().minute}"
 
 
 class DeepQLearningClient:
     def __init__(self, **kwargs):
-        self.discount_rate = kwargs.get("discount_rate", 0.99)
         self.greed_rate = kwargs.get("greed_rate", 1.0)
         self.greed_min = kwargs.get("greed_min", 0.1)
         self.greed_max = self.greed_rate
+        self.discount_rate = kwargs.get("discount_rate", 0.99)
+        self.eploration_decay_rate = kwargs.get("eploration_decay_rate", 0.01)
         self.batch_size = kwargs.get("batch_size", 32)
         self.max_episodes = kwargs.get("max_episodes", 10000)
-        self.max_steps_per_episode = 10000
+        self.max_steps_per_episode = 5000
 
-        self.random_steps = kwargs.get("random_steps", 5000)
-        self.greedy_steps = kwargs.get("greedy_steps", 100000)
+        self.random_steps = kwargs.get("random_steps", 10000)
 
         self.running_reward = 0
-        self.highest_running_reward = kwargs.get("highest_running_reward", 3000)
-        self.winning_reward = kwargs.get("winning_reward", 9000)
+        self.highest_running_reward = kwargs.get("highest_running_reward", 0)
+        self.winning_reward = kwargs.get("winning_reward", 500)
 
+        self.update_after_actions = kwargs.get("update_after_actions", 5)
         self.update_target_after_actions = kwargs.get(
             "update_target_after_actions", 10000
         )
@@ -57,9 +57,10 @@ class DeepQLearningClient:
         self.plotter = ScorePlotter(MODEL_NAME, self.logger.filepath)
         self.sim_env = SimEnv()
 
-    def _update_greed_rate(self):
-        self.greed_rate -= (self.greed_max - self.greed_min) / self.greedy_steps
-        self.greed_rate = max(self.greed_rate, self.greed_min)
+    def _update_greed_rate(self, episode):
+        self.greed_rate = self.greed_min + (self.greed_max - self.greed_min) * np.exp(
+            -self.eploration_decay_rate * episode
+        )
 
     def _update_model(self):
         indices = np.random.choice(
@@ -95,6 +96,24 @@ class DeepQLearningClient:
     def _update_target_model(self):
         self.target_model.set_weights(self.model.get_weights())
 
+    def _choose_action(
+        self, steps_count, state, explore_actions, exploit_actions, model_check
+    ):
+        if (
+            steps_count < self.random_steps or self.greed_rate > np.random.rand(1)[0]
+        ) and not model_check:
+            action = np.random.choice([i for i in range(NUMBER_OF_ACTIONS)])
+            explore_actions += 1
+        else:
+            exploit_actions += 1
+            state_tensor = tf.convert_to_tensor(state)
+            state_tensor = tf.reshape(state_tensor, (1, 4))
+            action_probs_matrix = self.model(state_tensor)
+            action_probs = tf.reshape(action_probs_matrix[0], (5,))
+            action = tf.argmax(action_probs)
+
+        return action, explore_actions, exploit_actions
+
     def _save_config_txt(self, config_dict):
         if not os.path.exists(self.model_dir):
             os.makedirs(self.model_dir)
@@ -120,30 +139,20 @@ class DeepQLearningClient:
         for episode in range(1, self.max_episodes + 1):
             state = self.sim_env.reset()
             episode_reward = 0
-            exploration_actions = 0
-            exploitation_actions = 0
+            explore_actions = 0
+            exploit_actions = 0
 
-            visual = not episode % 100
-            save = not episode % 500
+            model_check = visual = not episode % 100
 
             for timestep in range(self.max_steps_per_episode):
                 steps_count += 1
 
-                if (
-                    steps_count < self.random_steps
-                    or self.greed_rate > np.random.rand(1)[0]
-                ):
-                    action = np.random.choice([i for i in range(NUMBER_OF_ACTIONS)])
-                    exploration_actions += 1
-                else:
-                    exploitation_actions += 1
-                    state_tensor = tf.convert_to_tensor(state)
-                    state_tensor = tf.reshape(state_tensor, (1, 4))
-                    action_probs_matrix = self.model(state_tensor, training=False)
-                    action_probs = tf.reshape(action_probs_matrix[0], (5,))
-                    action = tf.argmax(action_probs)
+                action, explore_actions, exploit_actions = self._choose_action(
+                    steps_count, state, explore_actions, exploit_actions, model_check
+                )
 
-                self._update_greed_rate()
+                if steps_count > self.random_steps and not model_check:
+                    self._update_greed_rate(episode)
 
                 next_state, reward, done = self.sim_env.step(
                     ACTION_LIST[action],
@@ -163,7 +172,10 @@ class DeepQLearningClient:
 
                 state = next_state
 
-                if self.replay_buffer.done_history_size() > self.batch_size:
+                if (
+                    steps_count % self.update_after_actions == 0
+                    and self.replay_buffer.done_history_size() > self.batch_size
+                ):
                     self._update_model()
 
                 if steps_count % self.update_target_after_actions == 0:
@@ -186,11 +198,14 @@ class DeepQLearningClient:
 
                 if done:
                     break
+
+            if model_check:
+                print("MODEL CHECK!")
             print(
                 "Exploration count:",
-                exploration_actions,
+                explore_actions,
                 "Exploitation:",
-                exploitation_actions,
+                exploit_actions,
             )
             print("Episode:", episode, "Reward:", episode_reward)
 
@@ -209,13 +224,13 @@ class DeepQLearningClient:
                     episode_reward,
                     self.running_reward,
                     steps_count,
-                    exploration_actions,
-                    exploitation_actions,
+                    explore_actions,
+                    exploit_actions,
                     self.greed_rate,
                 )
             )
 
-            if save and self.running_reward > self.highest_running_reward:
+            if model_check and self.running_reward > self.highest_running_reward:
                 self._save_model()
                 self.highest_running_reward = self.running_reward
 

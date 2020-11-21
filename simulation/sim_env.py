@@ -73,16 +73,19 @@ class SimEnv:
             reward = 0
 
         elif state == ActiveSensors.BOTH_MAIN.value and action == Actions.MOVE_FORWARD:
-            reward = 15
-
-        elif state == ActiveSensors.LEFT.value and action == Actions.TURN_LEFT:
             reward = 10
+
+        elif (
+            state in [ActiveSensors.LEFT.value, ActiveSensors.BOTH_LEFT.value]
+            and action == Actions.TURN_LEFT
+        ):
+            reward = 15
 
         elif (
             state in [ActiveSensors.RIGHT.value, ActiveSensors.BOTH_RIGHT.value]
             and action == Actions.TURN_RIGHT
         ):
-            reward = 10
+            reward = 15
 
         elif (
             state in [ActiveSensors.FAR_LEFT.value, ActiveSensors.BOTH_LEFT.value]
@@ -98,7 +101,7 @@ class SimEnv:
 
         return reward
 
-    def step(self, action, episode_info, visual=True):
+    def step(self, action, episode_info=None, visual=True):
         if visual:
             self.clock.tick(FPS)
 
@@ -106,16 +109,18 @@ class SimEnv:
         self.perform_action(action, pixel_array)
         del pixel_array
 
-        text = self.font.render(
-            f"Episode: {episode_info[0]}"
-            + f"    Step: {episode_info[1]}"
-            + f"    Current reward: {episode_info[2]}",
-            True,
-            (0, 0, 0),
-        )
+        if episode_info:
+            text = self.font.render(
+                f"Episode: {episode_info[0]}"
+                + f"    Step: {episode_info[1]}"
+                + f"    Current reward: {episode_info[2]}",
+                True,
+                (0, 0, 0),
+            )
         if visual:
             self.display.blit(self.track, (0, 0))
-            self.display.blit(text, (0, 0))
+            if episode_info:
+                self.display.blit(text, (0, 0))
             self.robot.draw(self.display)
             pg.display.update()
 

@@ -36,3 +36,6 @@ class Actions(Enum):
     TURN_RIGHT = "turn right"
     ROTATE_LEFT = "rotate left"
     ROTATE_RIGHT = "rotate right"
+
+
+ACTION_LIST = [action for action in Actions]

@@ -1,13 +1,15 @@
 from tensorflow.keras import optimizers
 
 from learning.dqn.deep_q_learning import DeepQLearningClient
+from learning.dqn.model_replay import ModelReplay
 
-OPT = [optimizers.Adam, optimizers.RMSprop]
-LR = [0.1, 0.01]
+test = ModelReplay(
+    "saved_data/dqn/good_2020-11-19_14-1/models/petla_odwrotnie_3827.455"
+)
+test.run()
 
-for optimizer in OPT:
-    for learning_rate in LR:
-        q_learn_adam = DeepQLearningClient(
-            optimizer=optimizer, learning_rate=learning_rate
-        )
-        q_learn_adam.run()
+# q_learn = DeepQLearningClient(
+#     learning_rate=0.01,
+#     update_after_actions=5,
+# )
+# q_learn.run()

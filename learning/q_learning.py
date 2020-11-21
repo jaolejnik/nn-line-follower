@@ -37,7 +37,6 @@ class QLearningClient:
 
     def print_q_table(self):
         print(pd.DataFrame.from_dict(self.q_table))
-        print()
 
     def learn(self, num_episodes, max_steps_per_episode):
         for episode in range(num_episodes):

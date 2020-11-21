@@ -1,0 +1,2 @@
+learning_rate = 0.1
+update_after_actions = 5
