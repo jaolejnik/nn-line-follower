@@ -29,13 +29,13 @@ class DeepQLearningClient:
         self.eploration_decay_rate = kwargs.get("eploration_decay_rate", 0.01)
         self.batch_size = kwargs.get("batch_size", 32)
         self.max_episodes = kwargs.get("max_episodes", 10000)
-        self.max_steps_per_episode = 5000
+        self.max_steps_per_episode = 3500
 
-        self.random_steps = kwargs.get("random_steps", 10000)
+        self.random_steps = kwargs.get("random_steps", 5000)
 
         self.running_reward = 0
         self.highest_running_reward = kwargs.get("highest_running_reward", 0)
-        self.winning_reward = kwargs.get("winning_reward", 500)
+        self.winning_reward = kwargs.get("winning_reward", 3000)
 
         self.update_after_actions = kwargs.get("update_after_actions", 5)
         self.update_target_after_actions = kwargs.get(
@@ -123,6 +123,7 @@ class DeepQLearningClient:
                 f.write(f"{key} = {value}\n")
 
     def _save_model(self):
+        print("SAVING MODEL")
         if not os.path.exists(self.model_dir):
             os.makedirs(self.model_dir)
         self.model.save(

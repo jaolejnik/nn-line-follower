@@ -72,32 +72,35 @@ class SimEnv:
         if state == ActiveSensors.NONE.value:
             reward = 0
 
-        elif state == ActiveSensors.BOTH_MAIN.value and action == Actions.MOVE_FORWARD:
+        elif (
+            state
+            in [
+                ActiveSensors.BOTH_MAIN.value,
+                ActiveSensors.FAR_LEFT_INACTIVE.value,
+                ActiveSensors.FAR_RIGHT_INACTIVE.value,
+                ActiveSensors.ALL,
+            ]
+            and action == Actions.MOVE_FORWARD
+        ):
             reward = 10
 
-        elif (
-            state in [ActiveSensors.LEFT.value, ActiveSensors.BOTH_LEFT.value]
-            and action == Actions.TURN_LEFT
-        ):
-            reward = 15
+        elif state == ActiveSensors.LEFT.value and action == Actions.TURN_LEFT:
+            reward = 5
 
-        elif (
-            state in [ActiveSensors.RIGHT.value, ActiveSensors.BOTH_RIGHT.value]
-            and action == Actions.TURN_RIGHT
-        ):
-            reward = 15
+        elif state == ActiveSensors.RIGHT.value and action == Actions.TURN_RIGHT:
+            reward = 5
 
         elif (
             state in [ActiveSensors.FAR_LEFT.value, ActiveSensors.BOTH_LEFT.value]
             or last_active_sensor == ActiveSensors.FAR_LEFT
         ) and action == Actions.ROTATE_LEFT:
-            reward = 20
+            reward = 5
 
         elif (
             state in [ActiveSensors.FAR_RIGHT.value, ActiveSensors.BOTH_RIGHT.value]
             or last_active_sensor == ActiveSensors.FAR_RIGHT
         ) and action == Actions.ROTATE_RIGHT:
-            reward = 20
+            reward = 5
 
         return reward
 
