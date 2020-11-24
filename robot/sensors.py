@@ -25,10 +25,6 @@ GPIO.setup(FAR_RIGHT_LINE, GPIO.IN)
 
 
 class LineSensors:
-    """
-    Infrared sensors for line detection.
-    """
-
     @staticmethod
     def left():
         return GPIO.input(LEFT_LINE)
@@ -44,6 +40,15 @@ class LineSensors:
     @staticmethod
     def far_right():
         return GPIO.input(FAR_RIGHT_LINE)
+
+    @staticmethod
+    def state():
+        return (
+            LineSensors.far_left(),
+            LineSensors.left(),
+            LineSensors.right(),
+            LineSensors.far_right(),
+        )
 
     @staticmethod
     def only_left_active():
@@ -108,10 +113,6 @@ class LineSensors:
 
 
 class CollisionSensors:
-    """
-    Ultrasound sensors for detection of incoming objects.
-    """
-
     @staticmethod
     def front_distance():
         GPIO.output(FRONT_TRIGGER, GPIO.HIGH)
@@ -123,8 +124,9 @@ class CollisionSensors:
             start = time()
         while GPIO.input(FRONT_ECHO) == 1:
             stop = time()
-        TimeElapsed = stop - start
-        distance = (TimeElapsed * 34300) / 2
+        time_elapsed = stop - start
+        distance = (time_elapsed * 34300) / 2
+
         return distance
 
 
