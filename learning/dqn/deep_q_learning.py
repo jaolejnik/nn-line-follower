@@ -8,7 +8,7 @@ import tensorflow as tf
 from tensorflow import keras
 
 from simulation.sim_env import SimEnv
-from utils.enums import ACTION_LIST, Actions, ActiveSensors
+from utils.enums import ACTION_LIST, Actions
 from utils.score_logger import ScoreLogger
 from utils.score_plotter import ScorePlotter
 
@@ -26,25 +26,28 @@ class DeepQLearningClient:
         self.greed_min = kwargs.get("greed_min", 0.1)
         self.greed_max = self.greed_rate
         self.discount_rate = kwargs.get("discount_rate", 0.99)
-        self.eploration_decay_rate = kwargs.get("eploration_decay_rate", 0.01)
         self.batch_size = kwargs.get("batch_size", 32)
         self.max_episodes = kwargs.get("max_episodes", 10000)
-        self.max_steps_per_episode = 3500
+        self.max_steps_per_episode = 3000
 
-        self.random_steps = kwargs.get("random_steps", 5000)
+        self.random_steps = kwargs.get("random_steps", 10000)
+        self.greedy_steps = kwargs.get("greedy_steps", 100000)
+        # self.eploration_decay_rate = 10 / self.random_steps
 
         self.running_reward = 0
         self.highest_running_reward = kwargs.get("highest_running_reward", 0)
         self.winning_reward = kwargs.get("winning_reward", 3000)
 
-        self.update_after_actions = kwargs.get("update_after_actions", 5)
+        self.update_after_actions = kwargs.get("update_after_actions", 1)
         self.update_target_after_actions = kwargs.get(
             "update_target_after_actions", 10000
         )
+        self.visual_after_episodes = kwargs.get("visual_after_episodes", 10)
         self.optimizer = kwargs.get("optimizer", keras.optimizers.Adam)(
             learning_rate=kwargs.get("learning_rate", 0.01), clipnorm=1.0
         )
         self.loss_function = keras.losses.Huber()
+        self.min_los_to_update = kwargs.get("min_los_to_update", 0.5)
 
         self.model = create_q_model()
         self.target_model = create_q_model()
@@ -58,9 +61,11 @@ class DeepQLearningClient:
         self.sim_env = SimEnv()
 
     def _update_greed_rate(self, episode):
-        self.greed_rate = self.greed_min + (self.greed_max - self.greed_min) * np.exp(
-            -self.eploration_decay_rate * episode
-        )
+        self.greed_rate -= (self.greed_max - self.greed_min) / self.greedy_steps
+        self.greed_rate = max(self.greed_rate, self.greed_min)
+        # self.greed_rate = self.greed_min + (self.greed_max - self.greed_min) * np.exp(
+        #     -self.eploration_decay_rate * episode
+        # )
 
     def _update_model(self):
         indices = np.random.choice(
@@ -77,6 +82,7 @@ class DeepQLearningClient:
         ) = self.replay_buffer.get_samples(indices)
 
         future_rewards = self.target_model.predict(next_state_sample)
+
         updated_q_values = rewards_sample + self.discount_rate * tf.reduce_max(
             future_rewards, axis=1
         )
@@ -93,6 +99,8 @@ class DeepQLearningClient:
         grads = tape.gradient(loss, self.model.trainable_variables)
         self.optimizer.apply_gradients(zip(grads, self.model.trainable_variables))
 
+        return loss.numpy()
+
     def _update_target_model(self):
         self.target_model.set_weights(self.model.get_weights())
 
@@ -106,9 +114,12 @@ class DeepQLearningClient:
             explore_actions += 1
         else:
             exploit_actions += 1
-            state_tensor = tf.convert_to_tensor(state)
-            state_tensor = tf.reshape(state_tensor, (1, 4))
+            input_state = np.array(state).astype(int)
+            state_tensor = tf.convert_to_tensor(input_state)
+            # state_tensor = tf.reshape(state_tensor, (1, 4))
+            state_tensor = tf.expand_dims(state_tensor, axis=0)
             action_probs_matrix = self.model(state_tensor)
+
             action_probs = tf.reshape(action_probs_matrix[0], (5,))
             action = tf.argmax(action_probs)
 
@@ -143,16 +154,18 @@ class DeepQLearningClient:
             explore_actions = 0
             exploit_actions = 0
 
-            model_check = visual = not episode % 100
+            visual = not episode % self.visual_after_episodes
+            model_check = not episode % 100
 
             for timestep in range(self.max_steps_per_episode):
                 steps_count += 1
+                loss = np.NaN
 
                 action, explore_actions, exploit_actions = self._choose_action(
                     steps_count, state, explore_actions, exploit_actions, model_check
                 )
 
-                if steps_count > self.random_steps and not model_check:
+                if not model_check:
                     self._update_greed_rate(episode)
 
                 next_state, reward, done = self.sim_env.step(
@@ -177,7 +190,7 @@ class DeepQLearningClient:
                     steps_count % self.update_after_actions == 0
                     and self.replay_buffer.done_history_size() > self.batch_size
                 ):
-                    self._update_model()
+                    loss = self._update_model()
 
                 if steps_count % self.update_target_after_actions == 0:
                     self._update_target_model()
@@ -228,10 +241,11 @@ class DeepQLearningClient:
                     explore_actions,
                     exploit_actions,
                     self.greed_rate,
+                    loss,
                 )
             )
 
-            if model_check and self.running_reward > self.highest_running_reward:
+            if model_check and self.running_reward > 100:
                 self._save_model()
                 self.highest_running_reward = self.running_reward
 

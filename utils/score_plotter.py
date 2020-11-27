@@ -67,6 +67,16 @@ class ScorePlotter:
             "Epizod",
             "Współczynnik chciwości",
             "greed_rate",
+            ["orange"],
+        )
+
+    def plot_loss(self):
+        self._base_plot(
+            ["Episode"],
+            ["Loss"],
+            "Epizod",
+            "Wartość funkcji strat",
+            "loss",
             ["red"],
         )
 
@@ -75,3 +85,4 @@ class ScorePlotter:
         self.plot_running_reward()
         self.plot_actions()
         self.plot_greed_rate()
+        self.plot_loss()

@@ -13,7 +13,7 @@ class ReplayBuffer:
         self.done_history = []
         self.episode_rewards_history = []
 
-        self.max_memory_length = 100000
+        self.max_memory_length = 1000000
         self.VALID_KEYS = (
             "action",
             "state",

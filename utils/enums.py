@@ -12,7 +12,6 @@ class DirectionY(IntEnum):
 
 
 class ActiveSensors(Enum):
-    ALL = (1, 1, 1, 1)
     NONE = (0, 0, 0, 0)
     FAR_LEFT = (1, 0, 0, 0)
     LEFT = (0, 1, 0, 0)
@@ -28,6 +27,7 @@ class ActiveSensors(Enum):
     RIGHT_INACTIVE = (1, 1, 0, 1)
     FAR_RIGHT_INACTIVE = (1, 1, 1, 0)
     FAR_LEFT_INACTIVE = (0, 1, 1, 1)
+    ALL = (1, 1, 1, 1)
 
 
 class Actions(Enum):

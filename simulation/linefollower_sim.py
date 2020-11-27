@@ -21,7 +21,7 @@ class SimLineFollower:
             self.rect.center,
             self.angle,
         )
-        self.last_active_line_sensor = ActiveSensors.BOTH_MAIN
+        self.last_active_line_sensor = ActiveSensors.BOTH_MAIN.value
 
     def _init_surface(self, scale):
         surface = pg.image.load(os.path.join(CURRENT_DIR, "assets/robot.png"))

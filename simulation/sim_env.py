@@ -38,7 +38,7 @@ class SimEnv:
 
     def save_state(self, state):
         if len(self.last_n_states) == self.state_memory_size:
-            self.last_n_states.pop(0)
+            del self.last_n_states[0]
         self.last_n_states.append(state)
 
     def all_saved_states_eq(self, state):
@@ -66,47 +66,37 @@ class SimEnv:
 
         self.robot.line_sensors.get_readings(pixel_array)
 
-    def evaluate_action(self, state, action, last_active_sensor):
-        reward = -5
+    def evaluate(self, state):
+        reward = 0
 
         if state == ActiveSensors.NONE.value:
-            reward = 0
+            reward = -10
 
-        elif (
-            state
-            in [
-                ActiveSensors.BOTH_MAIN.value,
-                ActiveSensors.FAR_LEFT_INACTIVE.value,
-                ActiveSensors.FAR_RIGHT_INACTIVE.value,
-                ActiveSensors.ALL,
-            ]
-            and action == Actions.MOVE_FORWARD
-        ):
+        elif state == ActiveSensors.BOTH_MAIN.value:
             reward = 10
 
-        elif state == ActiveSensors.LEFT.value and action == Actions.TURN_LEFT:
-            reward = 5
+        elif state in [ActiveSensors.LEFT.value, ActiveSensors.RIGHT.value]:
+            reward = 3
 
-        elif state == ActiveSensors.RIGHT.value and action == Actions.TURN_RIGHT:
-            reward = 5
+        elif state in [ActiveSensors.BOTH_LEFT.value, ActiveSensors.BOTH_RIGHT.value]:
+            reward = 2
 
-        elif (
-            state in [ActiveSensors.FAR_LEFT.value, ActiveSensors.BOTH_LEFT.value]
-            or last_active_sensor == ActiveSensors.FAR_LEFT
-        ) and action == Actions.ROTATE_LEFT:
-            reward = 5
-
-        elif (
-            state in [ActiveSensors.FAR_RIGHT.value, ActiveSensors.BOTH_RIGHT.value]
-            or last_active_sensor == ActiveSensors.FAR_RIGHT
-        ) and action == Actions.ROTATE_RIGHT:
-            reward = 5
+        elif state in [
+            ActiveSensors.FAR_LEFT.value,
+            ActiveSensors.FAR_RIGHT.value,
+            ActiveSensors.FAR_LEFT_INACTIVE.value,
+            ActiveSensors.FAR_RIGHT_INACTIVE.value,
+            ActiveSensors.ALL.value,
+        ]:
+            reward = 1
 
         return reward
 
     def step(self, action, episode_info=None, visual=True):
         if visual:
             self.clock.tick(FPS)
+
+        self.robot.last_active_line_sensor = self.robot.line_sensors.state
 
         pixel_array = pg.PixelArray(self.track)
         self.perform_action(action, pixel_array)
@@ -129,10 +119,10 @@ class SimEnv:
 
         self.save_state(self.robot.line_sensors.state)
 
-        reward = self.evaluate_action(
-            self.robot.line_sensors.state,
-            action,
-            self.robot.last_active_line_sensor,
+        reward = (
+            20
+            if self.robot.line_sensors.finish
+            else self.evaluate(self.robot.line_sensors.state)
         )
 
         done = self.robot.line_sensors.finish or self.all_saved_states_eq(

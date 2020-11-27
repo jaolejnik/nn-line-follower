@@ -11,7 +11,7 @@ FIND_TRACK_ACTIONS = [
 
 class ProgrammedLineFollower(BaseLineFollower):
     def __init__(self, base_speed, action_time):
-        super.__init__(base_speed, action_time)
+        super().__init__(base_speed, action_time)
 
     def sharp_turn(self, direction_x):
         while not self.line_sensors.one_of_main_active():

@@ -8,6 +8,7 @@ VALUES_TO_LOG = (
     "Exploration actions",
     "Exploitation actions",
     "Greed rate",
+    "Loss",
 )
 
 
