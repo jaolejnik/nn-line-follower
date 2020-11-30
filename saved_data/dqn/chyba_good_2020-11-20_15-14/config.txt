@@ -1,2 +1,0 @@
-optimizer = <class 'tensorflow.python.keras.optimizer_v2.adam.Adam'>
-update_after_actions = 5

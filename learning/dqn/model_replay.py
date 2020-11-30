@@ -12,10 +12,10 @@ class ModelReplay:
 
     def run(self, max_steps=0):
         i = 0
-        max_steps = max_steps if max_steps else 1
+        max_steps = max_steps if max_steps else 0
         state = self.sim_env.reset()
         while i <= max_steps:
-            if max_steps:
+            if max_steps > 0:
                 i += 1
             state_tensor = tf.convert_to_tensor(state)
             state_tensor = tf.expand_dims(state_tensor, axis=0)

@@ -32,7 +32,6 @@ class DeepQLearningClient:
 
         self.random_steps = kwargs.get("random_steps", 10000)
         self.greedy_steps = kwargs.get("greedy_steps", 100000)
-        # self.eploration_decay_rate = 10 / self.random_steps
 
         self.running_reward = 0
         self.highest_running_reward = kwargs.get("highest_running_reward", 0)
@@ -42,12 +41,11 @@ class DeepQLearningClient:
         self.update_target_after_actions = kwargs.get(
             "update_target_after_actions", 10000
         )
-        self.visual_after_episodes = kwargs.get("visual_after_episodes", 10)
+        self.visual_after_episodes = kwargs.get("visual_after_episodes", 0)
         self.optimizer = kwargs.get("optimizer", keras.optimizers.Adam)(
             learning_rate=kwargs.get("learning_rate", 0.01), clipnorm=1.0
         )
         self.loss_function = keras.losses.Huber()
-        self.min_los_to_update = kwargs.get("min_los_to_update", 0.5)
 
         self.model = create_q_model()
         self.target_model = create_q_model()
@@ -60,12 +58,9 @@ class DeepQLearningClient:
         self.plotter = ScorePlotter(MODEL_NAME, self.logger.filepath)
         self.sim_env = SimEnv()
 
-    def _update_greed_rate(self, episode):
+    def _update_greed_rate(self):
         self.greed_rate -= (self.greed_max - self.greed_min) / self.greedy_steps
         self.greed_rate = max(self.greed_rate, self.greed_min)
-        # self.greed_rate = self.greed_min + (self.greed_max - self.greed_min) * np.exp(
-        #     -self.eploration_decay_rate * episode
-        # )
 
     def _update_model(self):
         indices = np.random.choice(
@@ -155,7 +150,8 @@ class DeepQLearningClient:
             exploit_actions = 0
 
             visual = not episode % self.visual_after_episodes
-            model_check = not episode % 100
+            model_check = False  # not episode % 0
+            save = not episode % 50
 
             for timestep in range(self.max_steps_per_episode):
                 steps_count += 1
@@ -166,7 +162,7 @@ class DeepQLearningClient:
                 )
 
                 if not model_check:
-                    self._update_greed_rate(episode)
+                    self._update_greed_rate()
 
                 next_state, reward, done = self.sim_env.step(
                     ACTION_LIST[action],
@@ -224,10 +220,7 @@ class DeepQLearningClient:
             print("Episode:", episode, "Reward:", episode_reward)
 
             self.replay_buffer.save_to_history(episode_reward=episode_reward)
-            if (
-                self.replay_buffer.episode_rewards_history_size()
-                > self.replay_buffer.max_memory_length
-            ):
+            if self.replay_buffer.episode_rewards_history_size() > 100:
                 self.replay_buffer.limit_history(episode_reward=True)
 
             self.running_reward = self.replay_buffer.episode_rewards_mean()
@@ -245,7 +238,9 @@ class DeepQLearningClient:
                 )
             )
 
-            if model_check and self.running_reward > 100:
+            if (
+                model_check or save
+            ) and self.running_reward > self.highest_running_reward:
                 self._save_model()
                 self.highest_running_reward = self.running_reward
 

@@ -70,20 +70,26 @@ class SimEnv:
         reward = 0
 
         if state == ActiveSensors.NONE.value:
-            reward = -10
+            reward = -30
 
         elif state == ActiveSensors.BOTH_MAIN.value:
             reward = 10
 
-        elif state in [ActiveSensors.LEFT.value, ActiveSensors.RIGHT.value]:
+        elif state in [
+            ActiveSensors.LEFT.value,
+            ActiveSensors.RIGHT.value,
+        ]:
             reward = 3
-
-        elif state in [ActiveSensors.BOTH_LEFT.value, ActiveSensors.BOTH_RIGHT.value]:
-            reward = 2
 
         elif state in [
             ActiveSensors.FAR_LEFT.value,
             ActiveSensors.FAR_RIGHT.value,
+            ActiveSensors.BOTH_LEFT.value,
+            ActiveSensors.BOTH_RIGHT.value,
+        ]:
+            reward = 2
+
+        elif state in [
             ActiveSensors.FAR_LEFT_INACTIVE.value,
             ActiveSensors.FAR_RIGHT_INACTIVE.value,
             ActiveSensors.ALL.value,
