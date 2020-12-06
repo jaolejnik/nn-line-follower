@@ -17,7 +17,6 @@ class BaseLineFollower:
         self.lost = False
         self.action_manager = MovementManager()
         self.timer = Timer()
-        self.time_since_lost_line = 0
 
     def move(self, direction_y):
         self.action_manager.add_and_save_action(

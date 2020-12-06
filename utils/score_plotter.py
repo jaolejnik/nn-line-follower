@@ -19,14 +19,30 @@ class ScorePlotter:
         self.data = pd.read_csv(self.scores_filepath)
 
     def _base_plot(
-        self, x_keys, y_keys, x_label, y_label, name_prefix, colors=["blue"]
+        self,
+        x_keys,
+        y_keys,
+        x_label,
+        y_label,
+        name_prefix,
+        colors=["blue"],
+        legend_items=None,
     ):
         fig, ax = plt.subplots(1, 1)
         for x_key, y_key, color in zip(x_keys, y_keys, colors):
-            ax.plot(self.data[x_key], self.data[y_key], color=color)
+            x_data = self.data[x_key]
+            if type(y_key) in [tuple, list]:
+                y_data = [
+                    a + b for a, b in zip(self.data[y_key[0]], self.data[y_key[1]])
+                ]
+            else:
+                y_data = self.data[y_key]
+            ax.plot(x_data, y_data, color=color)
         ax.set_xlabel(x_label)
         ax.set_ylabel(y_label)
         ax.grid()
+        if legend_items:
+            ax.legend(legend_items)
         fig.savefig(
             os.path.join(self.plots_filepath, f"{name_prefix}_{self.model_name}")
         )
@@ -45,7 +61,7 @@ class ScorePlotter:
             ["Episode"],
             ["Running reward"],
             "Epizod",
-            "Średnia nagroda z zapisanej pamięci",
+            "Średnia nagroda z ostanich 100 próbek",
             "running_reward",
             ["orange"],
         )
@@ -53,11 +69,18 @@ class ScorePlotter:
     def plot_actions(self):
         self._base_plot(
             ["Episode"] * 3,
-            ["Total actions", "Exploration actions", "Exploitation actions"],
+            [
+                "Exploitation actions",
+                "Exploration actions",
+            ],
             "Epizod",
             "Podjęte akcje",
             "actions",
-            ["blue", "orange", "green"],
+            [
+                "blue",
+                "orange",
+            ],
+            ["Eksploatacja", "Eksploracja"],
         )
 
     def plot_greed_rate(self):
@@ -65,7 +88,7 @@ class ScorePlotter:
             ["Episode"],
             ["Greed rate"],
             "Epizod",
-            "Współczynnik chciwości",
+            r"Współczynnik chciwości $\epsilon$",
             "greed_rate",
             ["orange"],
         )

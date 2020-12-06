@@ -8,6 +8,7 @@ q_learn = DeepQLearningClient(
     update_after_actions=1,
     visual_after_episodes=100,
     update_target_after_actions=25000,
-    siec=(4, 16, 16.5),
+    max_episodes=759,
+    siec=(4, 16, 16, 5),
 )
 q_learn.run()

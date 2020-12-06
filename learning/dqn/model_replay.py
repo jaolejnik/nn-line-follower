@@ -6,8 +6,8 @@ from utils.enums import ACTION_LIST, Actions, ActiveSensors
 
 
 class ModelReplay:
-    def __init__(self, model_path):
-        self.sim_env = SimEnv()
+    def __init__(self, model_path, track_path="track_finish.png"):
+        self.sim_env = SimEnv(track_path)
         self.model = load_model(model_path)
 
     def run(self, max_steps=0):

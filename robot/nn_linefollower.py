@@ -1,16 +1,28 @@
 import tensorflow as tf
-from tensorflow.keras.models import load_model
+import RPi.GPIO as GPIO
 
-from utils.enums import Actions, ActiveSensors, DirectionX, DirectionY
+from time import sleep
+from utils.enums import Actions, ActiveSensors, DirectionX, DirectionY, ACTION_LIST
 
-from .linefollower import BaseLineFollower
+from .base_linefollower import BaseLineFollower
 
 
 class NNLineFollower(BaseLineFollower):
     def __init__(self, base_speed, action_time, model_path):
-        super.__init__(base_speed, action_time)
+        super().__init__(base_speed, action_time)
 
-        self.model = load_model(model_path)
+        self.model_interpreter = tf.lite.Interpreter(model_path=model_path)
+        self.model_interpreter.allocate_tensors()
+        self.model_input_details = self.model_interpreter.get_input_details()
+        self.model_output_details = self.model_interpreter.get_output_details()
+
+    def pass_to_model(self, input_data):
+        self.model_interpreter.set_tensor(
+            self.model_input_details[0]["index"], input_data
+        )
+
+        self.model_interpreter.invoke()
+        return self.model_interpreter.get_tensor(self.model_output_details[0]["index"])
 
     def perform_action(self, action):
         if action == Actions.MOVE_FORWARD:
@@ -29,16 +41,15 @@ class NNLineFollower(BaseLineFollower):
             self.rotate(DirectionX.RIGHT)
 
     def run(self):
-        while self.collision_sensors.front_distance() > 5.0 and not self.lost:
+        while self.collision_sensors.front_distance() > 5.0:
             state = self.line_sensors.state()
 
             state_tensor = tf.convert_to_tensor(state)
-            state_tensor = tf.reshape(state_tensor, (1, 4))
-            action_probs_matrix = self.model(state_tensor)
+            state_tensor = tf.expand_dims(state_tensor, axis=0)
+            state_tensor = tf.cast(state_tensor, dtype=tf.float32)
+            action_probs_matrix = self.pass_to_model(state_tensor)
             action_probs = tf.reshape(action_probs_matrix[0], (5,))
             action = tf.argmax(action_probs)
 
-            self.perform_action(action)
-
-            if state == ActiveSensors.NONE:
-                self.lost = self.timer.countdown_to(3)
+            print(state, ACTION_LIST[action])
+            self.perform_action(ACTION_LIST[action])

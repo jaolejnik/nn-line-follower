@@ -148,6 +148,7 @@ class DeepQLearningClient:
             episode_reward = 0
             explore_actions = 0
             exploit_actions = 0
+            loss_list = []
 
             visual = not episode % self.visual_after_episodes
             model_check = False  # not episode % 0
@@ -155,7 +156,6 @@ class DeepQLearningClient:
 
             for timestep in range(self.max_steps_per_episode):
                 steps_count += 1
-                loss = np.NaN
 
                 action, explore_actions, exploit_actions = self._choose_action(
                     steps_count, state, explore_actions, exploit_actions, model_check
@@ -187,6 +187,7 @@ class DeepQLearningClient:
                     and self.replay_buffer.done_history_size() > self.batch_size
                 ):
                     loss = self._update_model()
+                    loss_list.append(loss)
 
                 if steps_count % self.update_target_after_actions == 0:
                     self._update_target_model()
@@ -234,7 +235,7 @@ class DeepQLearningClient:
                     explore_actions,
                     exploit_actions,
                     self.greed_rate,
-                    loss,
+                    np.mean(loss_list),
                 )
             )
 

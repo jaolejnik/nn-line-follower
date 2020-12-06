@@ -1,6 +1,9 @@
+import RPi.GPIO as GPIO
+
 from utils.enums import ActiveSensors, DirectionX, DirectionY
 
-from .linefollower import BaseLineFollower
+from .base_linefollower import BaseLineFollower
+from .basic_movement import Movement
 
 FIND_TRACK_ACTIONS = [
     "Movement.move(DirectionY.FORWARD, self.base_speed, self.action_time*5)",
@@ -45,24 +48,25 @@ class ProgrammedLineFollower(BaseLineFollower):
             self.move(DirectionY.FORWARD)
             self.last_active_line_sensor = ActiveSensors.BOTH_MAIN
 
-        if self.line_sensors.only_right_of_main_active():
+        elif self.line_sensors.only_right_of_main_active():
             self.turn(DirectionX.RIGHT)
             self.last_active_line_sensor = ActiveSensors.RIGHT
 
-        if self.line_sensors.only_left_of_main_active():
+        elif self.line_sensors.only_left_of_main_active():
             self.turn(DirectionX.LEFT)
             self.last_active_line_sensor = ActiveSensors.LEFT
 
-        if self.line_sensors.only_far_left_active():
+        elif self.line_sensors.only_far_left_active():
             self.sharp_turn(DirectionX.LEFT)
             self.last_active_line_sensor = ActiveSensors.FAR_LEFT
 
-        if self.line_sensors.only_far_right_active():
+        elif self.line_sensors.only_far_right_active():
             self.sharp_turn(DirectionX.RIGHT)
             self.last_active_line_sensor = ActiveSensors.FAR_RIGHT
 
     def run(self):
         while self.collision_sensors.front_distance() > 5.0:
+            print(self.line_sensors.state())
             if not self.lost:
                 self.follow_line()
                 if not self.line_sensors.one_or_more_active():

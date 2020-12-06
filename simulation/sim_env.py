@@ -13,19 +13,19 @@ FPS = 60
 
 
 class SimEnv:
-    def __init__(self):
+    def __init__(self, track_path="track_finish.png"):
         pg.init()
         pg.font.init()
         self.font = pg.font.SysFont("Arial", 30)
         self.clock = pg.time.Clock()
-        self._init_track()
+        self._init_track(track_path)
         self.display = pg.display.set_mode(self.track.get_size())
         self.robot = SimLineFollower((150, self.track.get_size()[1] - 70), 0.5)
         self.state_memory_size = 10
         self.last_n_states = []
 
-    def _init_track(self):
-        track = pg.image.load(os.path.join(CURRENT_DIR, "assets/track_finish.png"))
+    def _init_track(self, track_path):
+        track = pg.image.load(os.path.join(CURRENT_DIR, "assets", track_path))
         track_size = track.get_size()
         track = pg.transform.scale(
             track, (int(0.3 * track_size[0]), int(0.3 * track_size[1]))
@@ -126,7 +126,7 @@ class SimEnv:
         self.save_state(self.robot.line_sensors.state)
 
         reward = (
-            20
+            100
             if self.robot.line_sensors.finish
             else self.evaluate(self.robot.line_sensors.state)
         )
